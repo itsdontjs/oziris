@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oziris — Diagnóstico Gratuito com IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #000;
+  --bg2:       #0a0a0a;
+  --surface:   rgba(255,255,255,0.04);
+  --surface2:  rgba(255,255,255,0.07);
+  --border:    rgba(255,255,255,0.10);
+  --border2:   rgba(255,255,255,0.18);
+  --text:      #fff;
+  --muted:     rgba(255,255,255,0.60);
+  --faint:     rgba(255,255,255,0.28);
+  --green:     #00C97B;
+  --green-dim: rgba(0,201,123,0.08);
+  --violet:    #9B7FFF;
+  --orange:    #ff8c42;
+  --sans: 'Outfit', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BACKGROUND ── */
+.bg-effects {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+}
+.glow {
+  position: absolute; width: 100%; height: 100%;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(120,40,180,0.22) 0%, transparent 50%),
+    radial-gradient(circle at 100% 50%, rgba(30,80,180,0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(79,70,229,0.15) 0%, transparent 60%);
+  filter: blur(80px);
+}
+.dots {
+  position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── NAV ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 40px;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.logo {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 20px; font-weight: 600; letter-spacing: -0.5px;
+}
+.logo-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: linear-gradient(135deg, #9B7FFF, #00C97B);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 11px; font-weight: 500; color: #fff;
+}
+.sys-badge {
+  font-family: var(--mono); font-size: 10px; color: var(--green);
+  background: var(--green-dim); border: 1px solid rgba(0,201,123,0.25);
+  border-radius: 20px; padding: 4px 12px; letter-spacing: 0.06em;
+  display: flex; align-items: center; gap: 6px;
+}
+.sys-badge::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 6px var(--green);
+  animation: blink 2s ease-in-out infinite;
+}
+.nav-version {
+  font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: 0.06em;
+}
+
+/* ── HERO ── */
+#hero {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh;
+  padding: 80px 24px 100px;
+  text-align: center;
+  transition: opacity .5s, transform .5s;
+}
+#hero.out { opacity: 0; transform: translateY(-30px); pointer-events: none; }
+
+.hero-label {
+  font-family: var(--mono); font-size: 11px; color: var(--green);
+  letter-spacing: 0.15em; text-transform: uppercase;
+  margin-bottom: 28px;
+  opacity: 0; animation: up .7s .1s ease forwards;
+}
+
+h1 {
+  font-size: clamp(42px, 8vw, 84px);
+  font-weight: 700; line-height: 1.1;
+  letter-spacing: -2px; margin-bottom: 28px;
+  opacity: 0; animation: up .7s .2s ease forwards;
+}
+h1 em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--violet) 0%, var(--green) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+.sub {
+  font-size: clamp(16px, 2vw, 20px); font-weight: 300; color: var(--muted);
+  max-width: 580px; margin: 0 auto 48px; line-height: 1.65;
+  opacity: 0; animation: up .7s .3s ease forwards;
+}
+
+/* TERMINAL CARD */
+.term-card {
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 18px 22px; margin: 0 auto 48px;
+  max-width: 460px; text-align: left;
+  backdrop-filter: blur(10px);
+  opacity: 0; animation: up .7s .4s ease forwards;
+}
+.term-bar {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 14px;
+}
+.term-dot { width: 10px; height: 10px; border-radius: 50%; }
+.term-line {
+  font-family: var(--mono); font-size: 12px; color: var(--muted);
+  line-height: 1.9; white-space: nowrap; overflow: hidden;
+}
+.term-line .g { color: var(--green); }
+.term-line .v { color: var(--violet); }
+.term-cursor {
+  display: inline-block; width: 7px; height: 13px;
+  background: var(--green); animation: blink 1s step-end infinite;
+  vertical-align: text-bottom; margin-left: 2px;
+}
+
+/* ── PROMPT BLOCK — Stitch-style ── */
+.prompt-wrap {
+  width: 100%; max-width: 680px; margin: 0 auto;
+  opacity: 0; animation: up .7s .5s ease forwards;
+}
+.prompt-block {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(28px);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 24px;
+  padding: 24px 24px 18px;
+  cursor: pointer;
+  transition: border-color .25s, background .25s, box-shadow .25s;
+  text-align: left;
+}
+.prompt-block:hover {
+  border-color: rgba(255,255,255,0.26);
+  background: rgba(255,255,255,0.08);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+}
+.prompt-text {
+  font-size: 18px; font-family: var(--sans); font-weight: 400;
+  color: var(--text); line-height: 1.55; margin-bottom: 20px;
+}
+.prompt-divider {
+  height: 1px; background: rgba(255,255,255,0.08); margin-bottom: 14px;
+}
+.prompt-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.prompt-hints { display: flex; flex-wrap: wrap; gap: 8px; }
+.prompt-hint {
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 20px; padding: 5px 13px; cursor: pointer;
+  transition: all .2s; white-space: nowrap;
+}
+.prompt-hint:hover {
+  background: rgba(0,201,123,0.10); border-color: rgba(0,201,123,0.30); color: var(--text);
+}
+.prompt-send {
+  width: 46px; height: 46px; flex-shrink: 0;
+  background: linear-gradient(135deg, #7C3AED, #059669);
+  border: none; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,201,123,0.28);
+  transition: transform .2s, box-shadow .2s;
+}
+.prompt-send:hover { transform: scale(1.10); box-shadow: 0 6px 32px rgba(0,201,123,0.50); }
+.prompt-send svg { width: 20px; height: 20px; }
+.prompt-note {
+  font-family: var(--mono); font-size: 11px; color: var(--faint);
+  letter-spacing: 0.06em; text-align: center; margin-top: 14px;
+}
+
+.proof {
+  display: flex; align-items: center; gap: 12px; justify-content: center;
+  margin-top: 52px;
+  opacity: 0; animation: up .7s .6s ease forwards;
+}
+.avs { display: flex; }
+.av {
+  width: 32px; height: 32px; border-radius: 50%; border: 2px solid #000;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  margin-left: -8px; color: var(--text);
+}
+.avs .av:first-child { margin-left: 0; }
+.proof-t { font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: 0.04em; }
+
+.metrics {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+  margin-top: 56px;
+  opacity: 0; animation: up .7s .7s ease forwards;
+}
+.metric {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 8px 18px;
+  font-family: var(--mono); font-size: 12px; color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+  backdrop-filter: blur(8px);
+}
+.metric .mg { color: var(--green); }
+
+@keyframes up { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ── CHAT ── */
+#chat {
+  display: none;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 900px;
+  margin: 0 auto;
+  padding-top: 62px;
+  position: relative; z-index: 1;
+}
+#chat.on { display: flex; }
+
+.ch {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--mono); font-size: 12px;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(14px);
+}
+.ch-brand { display: flex; align-items: center; gap: 10px; color: var(--text); letter-spacing: 0.06em; }
+.ch-pill {
+  font-family: var(--mono); font-size: 10px; color: var(--green);
+  background: var(--green-dim); border: 1px solid rgba(0,201,123,0.2);
+  border-radius: 20px; padding: 4px 12px; letter-spacing: 0.06em;
+  display: flex; align-items: center; gap: 5px;
+}
+.ch-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+.ch-step { color: var(--muted); }
+
+.cb {
+  flex: 1; overflow-y: auto; padding: 30px 24px 240px;
+  display: flex; flex-direction: column; gap: 14px;
+  scrollbar-width: none;
+}
+.cb::-webkit-scrollbar { display: none; }
+
+/* BUBBLES */
+.bub {
+  max-width: 82%; padding: 16px 20px;
+  border-radius: 20px;
+  font-size: 16px; line-height: 1.55; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border);
+  align-self: flex-start;
+  backdrop-filter: blur(10px);
+  opacity: 0; transform: translateY(10px);
+  animation: pop .35s ease forwards;
+  white-space: pre-wrap;
+}
+.bub.u {
+  align-self: flex-end;
+  background: rgba(155,127,255,0.10);
+  border-color: rgba(155,127,255,0.28);
+  border-radius: 20px 4px 20px 20px;
+}
+.bub.sys {
+  font-family: var(--mono); font-size: 13px;
+  background: rgba(0,201,123,0.06); border-color: rgba(0,201,123,0.22);
+  color: var(--green);
+}
+@keyframes pop { to { opacity:1; transform:translateY(0) } }
+
+/* TYPING */
+.typ {
+  display: flex; gap: 4px; align-items: center;
+  padding: 14px 20px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; align-self: flex-start; width: fit-content;
+  backdrop-filter: blur(10px);
+}
+.typ span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted); animation: tdot 1.4s infinite;
+}
+.typ span:nth-child(2) { animation-delay: .2s; }
+.typ span:nth-child(3) { animation-delay: .4s; }
+@keyframes tdot { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+/* INPUT WRAPPER — pill flutuante */
+.input-wrapper {
+  position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+  width: 90%; max-width: 820px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(40px);
+  border: 1px solid var(--border2);
+  border-radius: 32px; padding: 20px 24px;
+  z-index: 1000;
+}
+.input-row {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 14px;
+}
+.input-row input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: #fff; font-size: 17px; font-family: var(--sans);
+}
+.input-row input::placeholder { color: var(--faint); font-family: var(--mono); font-size: 13px; }
+.send-btn {
+  width: 40px; height: 40px;
+  background: var(--orange); border: none; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: opacity .2s, transform .15s; flex-shrink: 0;
+}
+.send-btn:disabled { opacity: .25; cursor: not-allowed; }
+.send-btn:not(:disabled):hover { transform: scale(1.08); }
+.send-btn svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2.2; }
+
+/* CHIPS — dentro do pill */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+  color: var(--text); padding: 8px 18px; border-radius: 20px;
+  cursor: pointer; font-size: 14px; font-family: var(--sans);
+  transition: all .2s; white-space: nowrap;
+}
+.chip:hover { background: rgba(0,201,123,0.12); border-color: rgba(0,201,123,0.35); }
+
+/* PROGRESS CARD */
+.pc {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 24px; padding: 24px;
+  max-width: 82%; align-self: flex-start;
+  backdrop-filter: blur(10px);
+  opacity: 0; transform: translateY(10px);
+  animation: pop .4s ease forwards;
+}
+.pc-label { font-family: var(--mono); font-size: 11px; color: var(--green); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 14px; }
+.ptrack { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+.pfill { height: 100%; background: var(--green); width: 0%; transition: width .4s ease; border-radius: 3px; }
+.pi {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 13px; color: var(--muted);
+  padding: 4px 0; transition: color .3s;
+}
+.pi.done { color: var(--text); }
+.pi-ic { font-family: var(--mono); font-size: 10px; color: var(--faint); width: 28px; flex-shrink: 0; }
+.pi.done .pi-ic { color: var(--green); }
+
+/* DIAGNOSIS CARD */
+.dc {
+  background: var(--surface); border: 1px solid rgba(0,201,123,0.2);
+  border-radius: 24px; padding: 24px;
+  max-width: 82%; align-self: flex-start;
+  backdrop-filter: blur(10px);
+  opacity: 0; transform: translateY(10px);
+  animation: pop .5s ease forwards;
+}
+.dc-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10px; color: var(--green);
+  background: rgba(0,201,123,0.08); border: 1px solid rgba(0,201,123,0.2);
+  border-radius: 20px; padding: 4px 14px; letter-spacing: 0.08em;
+  margin-bottom: 18px; text-transform: uppercase;
+}
+.dc-profile { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.dc-pill {
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 12px;
+}
+.ins { border-left: 2px solid; padding: 10px 14px; margin-bottom: 12px; border-radius: 0 10px 10px 0; }
+.ins:last-of-type { margin-bottom: 0; }
+.ins.r { border-color: #EF4444; background: rgba(239,68,68,0.05); }
+.ins.a { border-color: var(--violet); background: rgba(155,127,255,0.05); }
+.ins.g { border-color: var(--green); background: rgba(0,201,123,0.06); }
+.ins-t { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.ins-d { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.65; }
+
+/* OFFER CARD */
+.oc {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 24px; padding: 24px;
+  max-width: 82%; align-self: flex-start;
+  backdrop-filter: blur(10px);
+  opacity: 0; transform: translateY(10px);
+  animation: pop .5s ease forwards;
+}
+.oc-sys { font-family: var(--mono); font-size: 10px; color: var(--green); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+.oc-name { font-family: var(--sans); font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.oc-price-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; }
+.oc-old { font-family: var(--mono); font-size: 13px; color: var(--faint); text-decoration: line-through; }
+.oc-new { font-family: var(--sans); font-size: 36px; font-weight: 800; color: var(--green); }
+.oc-items { list-style: none; margin-bottom: 22px; }
+.oc-items li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 14px; color: var(--muted);
+  padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.oc-items li:last-child { border: none; }
+.ck { font-family: var(--mono); font-size: 12px; color: var(--green); flex-shrink: 0; margin-top: 2px; }
+.buy {
+  display: block; width: 100%;
+  background: var(--green); color: #000;
+  font-family: var(--sans); font-size: 16px; font-weight: 700;
+  padding: 16px; border-radius: 14px; border: none; cursor: pointer;
+  text-align: center; text-decoration: none;
+  transition: filter .2s, transform .15s;
+  box-shadow: 0 8px 30px rgba(0,201,123,0.3);
+}
+.buy:hover { filter: brightness(1.08); transform: scale(1.02); }
+.oc-note { font-family: var(--mono); font-size: 10px; color: var(--faint); text-align: center; margin-top: 12px; letter-spacing: 0.04em; }
+
+@media (max-width: 600px) {
+  .nav { padding: 15px 20px; }
+  .nav-version { display: none; }
+  h1 { font-size: 44px; letter-spacing: -1px; }
+  .input-wrapper { bottom: 20px; width: 95%; padding: 16px 18px; }
+  .bub, .dc, .oc, .pc { max-width: 94%; }
+  .metrics { flex-direction: column; align-items: center; }
+  .input-row { margin-bottom: 10px; }
+  .prompt-hints { display: none; }
+  .prompt-text { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-effects">
+  <div class="glow"></div>
+  <div class="dots"></div>
+</div>
+
+<!-- ═══ NAV ═══ -->
+<nav class="nav">
+  <div class="logo">
+    <div class="logo-icon">OZ</div>
+    Oziris
+  </div>
+  <div class="sys-badge">SISTEMA ATIVO</div>
+  <div class="nav-version">v2.1 — DIAGNÓSTICO</div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+
+  <div class="hero-label">// MÓDULO DE DIAGNÓSTICO — ACESSO GRATUITO</div>
+
+  <h1>Descubra onde o seu<br><em>marketing está falhando</em></h1>
+
+  <p class="sub">
+    Nossa IA cruza os dados reais do seu negócio com os KPIs dos seus concorrentes e mostra em tempo real onde você perde clientes — de graça, em menos de 3 minutos.
+  </p>
+
+  
+
+  <div class="prompt-wrap">
+    <div class="prompt-block" onclick="openChat()">
+      <div class="prompt-text">Vamos automatizar sua empresa com IA?</div>
+      <div class="prompt-divider"></div>
+      <div class="prompt-footer">
+        <div class="prompt-hints">
+          <span class="prompt-hint">Clínica / Saúde</span>
+          <span class="prompt-hint">E-commerce</span>
+          <span class="prompt-hint">Educação</span>
+          <span class="prompt-hint">Agência</span>
+        </div>
+        <button class="prompt-send" onclick="event.stopPropagation(); openChat()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <p class="prompt-note">// SEM_CADASTRO · SEM_CARTÃO · ACESSO_IMEDIATO</p>
+  </div>
+
+  <div class="proof">
+    <div class="avs">
+      <div class="av" style="background:#3B0F8C">RB</div>
+      <div class="av" style="background:#065A32">MC</div>
+      <div class="av" style="background:#1D2C6B">FS</div>
+      <div class="av" style="background:#5B1A40">AP</div>
+    </div>
+    <span class="proof-t">340+ EMPRESÁRIOS DIAGNOSTICADOS ESSA SEMANA</span>
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><span class="mg">⚡</span> Análise em tempo real</div>
+    <div class="metric"><span class="mg">🎯</span> KPIs dos concorrentes</div>
+    <div class="metric"><span class="mg">🔒</span> SECURE — Dados protegidos</div>
+    <div class="metric"><span class="mg">🤖</span> Motor Claude · Gemini · OpenAI</div>
+  </div>
+
+</section>
+
+<!-- ═══ CHAT ═══ -->
+<div id="chat">
+
+  <div class="ch">
+    <div class="ch-brand">
+      <div class="logo-icon" style="width:22px;height:22px;font-size:9px;border-radius:6px;">OZ</div>
+      OZIRIS — AGENTE DE DIAGNÓSTICO
+    </div>
+    <div class="ch-pill">SISTEMA ATIVO</div>
+    <div class="ch-step" id="slabel">ETAPA_01 / 05</div>
+  </div>
+
+  <div class="cb" id="cb"></div>
+
+  <div class="input-wrapper" id="input-area" style="display:none;">
+    <div class="input-row">
+      <input type="text" id="inp" placeholder="// digite_sua_resposta..." autocomplete="off">
+      <button class="send-btn" id="sbtn" onclick="sendTxt()" disabled>
+        <svg viewBox="0 0 24 24"><path d="M2 12L22 2L15 22L11 13L2 12Z"/></svg>
+      </button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+</div>
+
+<script>
+const cb       = document.getElementById('cb');
+const chips    = document.getElementById('chips');
+const inp      = document.getElementById('inp');
+const sbtn     = document.getElementById('sbtn');
+const sl       = document.getElementById('slabel');
+const inputArea= document.getElementById('input-area');
+const ans      = {};
+
+inp.addEventListener('input', () => { sbtn.disabled = inp.value.trim() === ''; });
+inp.addEventListener('keydown', e => { if (e.key === 'Enter') sendTxt(); });
+
+function openChat() {
+  const hero = document.getElementById('hero');
+  hero.classList.add('out');
+  setTimeout(() => {
+    hero.style.display = 'none';
+    document.getElementById('chat').classList.add('on');
+    inputArea.style.display = 'block';
+    run(0);
+  }, 500);
+}
+
+function scroll() { setTimeout(() => cb.scrollTo({ top: cb.scrollHeight, behavior: 'smooth' }), 80); }
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function mkTyping() {
+  const el = document.createElement('div'); el.className = 'typ'; el.id = 'typ';
+  el.innerHTML = '<span></span><span></span><span></span>';
+  cb.appendChild(el); scroll(); return el;
+}
+function rmTyp() { const t = document.getElementById('typ'); if (t) t.remove(); }
+
+async function say(txt, cls = '', delay = 1200) {
+  mkTyping();
+  await wait(delay);
+  rmTyp();
+  const el = document.createElement('div');
+  el.className = 'bub' + (cls ? ' ' + cls : '');
+  el.textContent = txt;
+  cb.appendChild(el); scroll();
+}
+
+function showChips(opts, cb2) {
+  chips.innerHTML = '';
+  opts.forEach(o => {
+    const b = document.createElement('button'); b.className = 'chip'; b.textContent = o;
+    b.onclick = () => { chips.innerHTML = ''; addBub(o, 'u'); cb2(o); };
+    chips.appendChild(b);
+  });
+}
+
+function addBub(txt, cls = '') {
+  const el = document.createElement('div');
+  el.className = 'bub' + (cls ? ' ' + cls : '');
+  el.textContent = txt;
+  cb.appendChild(el); scroll();
+}
+
+function clrChips() { chips.innerHTML = ''; }
+function setStep(n) { sl.textContent = `ETAPA_0${n} / 05`; }
+
+function awaitTxt() { return new Promise(res => { window._th = res; }); }
+
+function sendTxt() {
+  const v = inp.value.trim(); if (!v) return;
+  inp.value = ''; sbtn.disabled = true; clrChips();
+  addBub(v, 'u');
+  if (window._th) { window._th(v); window._th = null; }
+}
+
+// ─── SEGMENT DATA ─────────────────────────────────────────────────
+const SD = {
+  'Clínica / Saúde':      { cpl:'R$ 28', perda:'63%', conc:'R$ 3.200/mês', opp:'nutrição pós-consulta e reativação de pacientes inativos' },
+  'E-commerce':           { cpl:'R$ 12', perda:'71%', conc:'R$ 8.500/mês', opp:'recuperação de carrinho abandonado e remarketing inteligente' },
+  'Educação / Cursos':    { cpl:'R$ 18', perda:'67%', conc:'R$ 4.100/mês', opp:'sequência de onboarding automatizada e redução de churn' },
+  'Imobiliária':          { cpl:'R$ 45', perda:'58%', conc:'R$ 5.800/mês', opp:'qualificação automática de leads e follow-up de longo prazo' },
+  'Academia / Fitness':   { cpl:'R$ 15', perda:'69%', conc:'R$ 2.900/mês', opp:'retenção de alunos e campanhas de reativação mensais' },
+  'Restaurante / Food':   { cpl:'R$ 9',  perda:'74%', conc:'R$ 1.800/mês', opp:'fidelização via WhatsApp e gestão de reviews automatizada' },
+  'Agência de Marketing': { cpl:'R$ 35', perda:'55%', conc:'R$ 6.200/mês', opp:'automação de relatórios e prospecção de novos clientes' },
+};
+
+const PI = {
+  'Gero leads mas nenhum compra':             'O tráfego está funcionando. O problema está na etapa de nutrição pós-captura — leads sem follow-up automatizado esfriaram antes de decidir.',
+  'Meu custo por lead está alto demais':      'CPL acima do benchmark do segmento. Criativos mais específicos + landing pages otimizadas reduzem esse custo em até 40%.',
+  'Não tenho tempo pra executar o marketing': 'Sem automação, o marketing depende de você. Isso cria um gargalo que limita o crescimento diretamente à sua disponibilidade.',
+  'Não sei se meu investimento tá retornando':'Sem rastreamento de atribuição, o dinheiro investido vira caixa-preta. Você não sabe o que funciona, então não consegue escalar o que dá resultado.',
+  'Minha equipe não entrega o que preciso':   'Processos manuais sobrecarregam a equipe com tarefas repetitivas, deixando zero espaço pra estratégia e criatividade.',
+};
+
+// ─── PROGRESS CARD ────────────────────────────────────────────────
+async function showProgress(seg) {
+  const el = document.createElement('div'); el.className = 'pc';
+  el.innerHTML = `
+    <div class="pc-label">// PROCESSANDO_DIAGNÓSTICO — AGUARDE</div>
+    <div class="ptrack"><div class="pfill" id="pf"></div></div>
+    <div class="pi" id="pa"><div class="pi-ic">001</div>Analisando perfil: ${seg}</div>
+    <div class="pi" id="pb"><div class="pi-ic">002</div>Cruzando com ${Math.floor(Math.random()*300+150)} empresas similares</div>
+    <div class="pi" id="pc_"><div class="pi-ic">003</div>Mapeando benchmarks de concorrentes</div>
+    <div class="pi" id="pd"><div class="pi-ic">004</div>Gerando diagnóstico personalizado</div>
+  `;
+  cb.appendChild(el); scroll();
+  const pf = document.getElementById('pf');
+  const steps = [['pa',25],['pb',50],['pc_',75],['pd',100]];
+  for (const [id, p] of steps) {
+    await wait(700);
+    pf.style.width = p + '%';
+    const d = document.getElementById(id);
+    d.classList.add('done');
+    d.querySelector('.pi-ic').textContent = '✓';
+    scroll();
+  }
+  await wait(600);
+}
+
+// ─── DIAGNOSIS CARD ───────────────────────────────────────────────
+function mkDiag(seg, budget, pain) {
+  const d  = SD[seg]  || { cpl:'R$ 22', perda:'65%', conc:'R$ 3.500/mês', opp:'automação de conteúdo e tráfego integrado' };
+  const pi = PI[pain] || 'Identificamos oportunidades claras no seu funil atual.';
+  const el = document.createElement('div'); el.className = 'dc';
+  el.innerHTML = `
+    <div class="dc-badge">✦ DIAGNÓSTICO_GERADO — EXCLUSIVO_PARA_VOCÊ</div>
+    <div class="dc-profile">
+      <span class="dc-pill">${seg}</span>
+      <span class="dc-pill">${budget}</span>
+    </div>
+    <div class="ins r">
+      <div class="ins-t">Você perde em média ${d.perda} dos leads na etapa de consideração</div>
+      <div class="ins-d">${pi}</div>
+    </div>
+    <div class="ins a">
+      <div class="ins-t">Seus concorrentes em ${seg} investem ${d.conc} com CPL médio de ${d.cpl}</div>
+      <div class="ins-d">Quem cresce nesse mercado agora usa automação para reduzir o custo por lead em até 40% enquanto aumenta o volume total de conversões.</div>
+    </div>
+    <div class="ins g">
+      <div class="ins-t">Sua maior oportunidade está em ${d.opp}</div>
+      <div class="ins-d">Empresas similares que implementaram agentes autônomos de IA reduziram o custo por aquisição em 35% nos primeiros 60 dias.</div>
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:12px;line-height:1.7;">// STATUS: ANÁLISE_COMPLETA — Preparando recomendação personalizada...</div>
+  `;
+  return el;
+}
+
+// ─── OFFER CARD ───────────────────────────────────────────────────
+function mkOffer() {
+  const el = document.createElement('div'); el.className = 'oc';
+  el.innerHTML = `
+    <div class="oc-sys">// RECOMENDAÇÃO_DO_SISTEMA — ACESSO_LIBERADO</div>
+    <div class="oc-name">Kit de Implementação — Agentes Autônomos de IA</div>
+    <div class="oc-price-row">
+      <span class="oc-old">R$ 297</span>
+      <span class="oc-new">R$ 97</span>
+    </div>
+    <ul class="oc-items">
+      <li><span class="ck">[✓]</span> Os prompts exatos que esse agente usa — prontos para copiar e aplicar</li>
+      <li><span class="ck">[✓]</span> Mapa de implementação em 7 dias passo a passo</li>
+      <li><span class="ck">[✓]</span> Checklist completo de ferramentas gratuitas com links diretos</li>
+      <li><span class="ck">[✓]</span> 30 dias no grupo fechado de suporte e estratégia</li>
+      <li><span class="ck">[✓]</span> Guia de KPIs: o que monitorar toda semana no seu negócio</li>
+    </ul>
+    <a href="SEU_LINK_KIWIFY_AQUI" class="buy">Garantir o Kit por R$ 97 agora →</a>
+    <p class="oc-note">// CONDIÇÃO_EXCLUSIVA para quem completou o diagnóstico · Acesso imediato após pagamento</p>
+  `;
+  return el;
+}
+
+// ─── MAIN FLOW ────────────────────────────────────────────────────
+async function run(s) {
+
+  // 0 — BOAS-VINDAS
+  if (s === 0) {
+    setStep(1);
+    await say(`Oi! 👋 Bem-vindo ao módulo de diagnóstico do Oziris.\n\nSou um agente autônomo de IA — opero simultaneamente com os motores do Claude, Gemini e OpenAI, o que me permite cruzar dados reais de mercado em tempo real.\n\nEm menos de 3 minutos você vai saber exatamente onde seu funil perde dinheiro e o que seus concorrentes fazem diferente.\n\nPodemos começar?`, '', 1600);
+    showChips(['Sim, pode começar! 🚀', 'Tenho uma dúvida antes'], async r => {
+      if (r.includes('dúvida')) {
+        await say('Claro! Me fala o que quer saber 😊', '', 900);
+        const d = await awaitTxt();
+        await say(`Entendido! Vou esclarecer tudo ao longo do diagnóstico.\nPode deixar comigo 👊`, '', 1100);
+      }
+      run(1);
+    });
+    return;
+  }
+
+  // 1 — SEGMENTO
+  if (s === 1) {
+    setStep(2);
+    await say(`Primeira pergunta:\n\nQual é o segmento do seu negócio?`, '', 1000);
+    showChips(['Clínica / Saúde','E-commerce','Educação / Cursos','Imobiliária','Academia / Fitness','Restaurante / Food','Agência de Marketing','Outro'], async r => {
+      if (r === 'Outro') {
+        await say('Qual segmento exatamente?', '', 800);
+        const v = await awaitTxt();
+        ans.seg = v;
+      } else { ans.seg = r; }
+      run(2);
+    });
+    return;
+  }
+
+  // 2 — TRÁFEGO
+  if (s === 2) {
+    setStep(3);
+    await say(`Entendido ✅\n\nVocê investe em tráfego pago hoje?\n(Meta Ads, Google Ads...)`, '', 1100);
+    showChips(['Sim, invisto todo mês', 'Já investi, mas parei', 'Ainda não invisto'], async r => {
+      if (r === 'Sim, invisto todo mês') {
+        await say('Qual valor aproximado por mês?', '', 900);
+        showChips(['Até R$ 1.000','R$ 1.000 – 5.000','R$ 5.000 – 15.000','Acima de R$ 15.000'], async v => {
+          ans.budget = v; run(3);
+        });
+      } else {
+        ans.budget = 'Sem investimento ativo'; run(3);
+      }
+    });
+    return;
+  }
+
+  // 3 — DOR (SPIN Problema)
+  if (s === 3) {
+    setStep(4);
+    await say(`Já consigo ver o perfil do seu negócio se formando aqui...\n\nMe conta: qual dessas situações mais representa o que você enfrenta hoje no marketing?`, '', 1300);
+    showChips([
+      'Gero leads mas nenhum compra',
+      'Meu custo por lead está alto demais',
+      'Não tenho tempo pra executar o marketing',
+      'Não sei se meu investimento tá retornando',
+      'Minha equipe não entrega o que preciso',
+    ], async r => { ans.pain = r; run(4); });
+    return;
+  }
+
+  // 4 — IMPLICAÇÃO (SPIN Implication)
+  if (s === 4) {
+    setStep(5);
+    await say(`Entendo. Esse cenário é mais comum do que parece — e o impacto costuma ser maior do que aparece nos números.\n\nÚltima pergunta antes do diagnóstico:\n\nSe isso continuar igual nos próximos 6 meses, como vai afetar seu faturamento?`, '', 1500);
+    showChips([
+      'Vou perder espaço pro concorrente',
+      'Meu crescimento vai estagnar',
+      'Vou continuar desperdiçando dinheiro',
+      'Não sei — é o que me preocupa',
+    ], async r => { ans.impact = r; run(5); });
+    return;
+  }
+
+  // 5 — PROCESSAMENTO + DIAGNÓSTICO + OFERTA
+  if (s === 5) {
+    clrChips();
+    inp.style.display = 'none';
+
+    const sysEl = document.createElement('div');
+    sysEl.className = 'bub sys';
+    sysEl.textContent = '// INICIANDO_ANÁLISE... Conectando engines de IA ⚙️';
+    cb.appendChild(sysEl); scroll();
+
+    await wait(600);
+    await showProgress(ans.seg);
+    await wait(300);
+
+    cb.appendChild(mkDiag(ans.seg, ans.budget || 'Sem investimento ativo', ans.pain));
+    scroll();
+    await wait(1400);
+
+    await say(`Com base nesse diagnóstico, o maior gargalo do seu negócio agora não é falta de produto — é falta de sistema.\n\nEu preparei um Kit completo para você implementar os primeiros agentes autônomos de IA no seu marketing ainda essa semana. 👇`, '', 1800);
+
+    await wait(400);
+    cb.appendChild(mkOffer());
+    scroll();
+
+    await wait(1600);
+    await say(`Alguma dúvida antes de garantir o seu acesso? Estou aqui. 😊`, '', 1000);
+
+    inp.style.display = '';
+    window._th = async v => {
+      await say(`Boa pergunta!\n\nO Kit chega no seu e-mail em menos de 2 minutos após o pagamento — acesso imediato a todos os materiais e ao grupo fechado de suporte.\n\nVale muito mais do que os R$ 97. Qualquer outra dúvida? 🎯`, '', 1400);
+      await wait(500);
+      cb.appendChild(mkOffer());
+      scroll();
+    };
+    return;
+  }
+}
+</script>
+</body>
+</html>

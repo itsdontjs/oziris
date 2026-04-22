@@ -1,0 +1,589 @@
+
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oziris — Diagnóstico Gratuito com IA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #000;
+            --surface: rgba(255, 255, 255, 0.04);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #fff;
+            --muted: rgba(255, 255, 255, 0.6);
+            --green: #00C97B;
+            --violet: #9B7FFF;
+            --orange: #ff8c42;
+            --sans: 'Outfit', sans-serif;
+            --mono: 'IBM Plex Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Background Effects */
+        .bg-effects {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .glow {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 0% 50%, rgba(120, 40, 180, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 100% 50%, rgba(30, 80, 180, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 100%, rgba(79, 70, 229, 0.15) 0%, transparent 60%);
+            filter: blur(80px);
+        }
+
+        .dots {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            position: fixed;
+            top: 0; width: 100%;
+            z-index: 100;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .beta-badge {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--muted);
+            font-family: var(--mono);
+        }
+
+        .btn-try {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Hero Section */
+        #hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 80px 24px;
+            text-align: center;
+            transition: opacity 0.5s, transform 0.5s;
+        }
+
+        #hero.out { opacity: 0; transform: translateY(-30px); pointer-events: none; display: none; }
+
+        h1 {
+            font-size: clamp(42px, 8vw, 84px);
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -2px;
+        }
+
+        h1 em {
+            font-style: normal;
+            background: linear-gradient(135deg, var(--violet), var(--green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: clamp(16px, 2vw, 20px);
+            color: var(--muted);
+            margin-bottom: 48px;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+
+        .cta-main {
+            background: linear-gradient(135deg, #7C3AED, #059669);
+            color: #fff;
+            padding: 18px 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 20px 40px rgba(0, 201, 123, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .cta-main:hover { transform: scale(1.05); }
+
+        /* Chat Interface */
+        #chat {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 900px;
+            margin: 0 auto;
+            padding-top: 80px;
+        }
+
+        #chat.on { display: flex; }
+
+        .chat-header {
+            padding: 15px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--mono);
+            font-size: 12px;
+        }
+
+        .chat-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px 20px 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scrollbar-width: none;
+        }
+
+        .chat-body::-webkit-scrollbar { display: none; }
+
+        /* Bubbles */
+        .bub {
+            max-width: 85%;
+            padding: 16px 20px;
+            border-radius: 20px;
+            font-size: 16px;
+            line-height: 1.5;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            align-self: flex-start;
+            backdrop-filter: blur(10px);
+            animation: pop 0.3s ease forwards;
+        }
+
+        @keyframes pop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .bub.u {
+            align-self: flex-end;
+            background: rgba(155, 127, 255, 0.1);
+            border-color: rgba(155, 127, 255, 0.3);
+        }
+
+        .bub.sys {
+            font-family: var(--mono);
+            font-size: 13px;
+            color: var(--green);
+            background: rgba(0, 201, 123, 0.05);
+            border-color: rgba(0, 201, 123, 0.2);
+        }
+
+        /* Input Area (Stitch Style) */
+        .input-wrapper {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(40px);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            padding: 24px;
+            z-index: 1000;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 18px;
+            font-family: inherit;
+        }
+
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--orange);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+        }
+
+        .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .send-btn svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2; }
+
+        /* Chips */
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .chip:hover { background: rgba(255, 255, 255, 0.15); }
+
+        /* Typing */
+        .typ { display: flex; gap: 4px; padding: 12px 20px; background: var(--surface); border-radius: 20px; width: fit-content; margin-bottom: 10px; }
+        .typ span { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: blink 1.4s infinite; }
+        .typ span:nth-child(2) { animation-delay: 0.2s; }
+        .typ span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        /* Cards (Diagnosis/Offer) */
+        .dc, .oc, .pc {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            margin-top: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .dc-badge, .oc-sys, .pc-label {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--green);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ins { margin-bottom: 16px; padding-left: 12px; border-left: 2px solid var(--border); }
+        .ins-t { font-weight: 600; margin-bottom: 4px; }
+        .ins-d { font-size: 14px; color: var(--muted); }
+        .ins.r { border-color: #ff4d4d; }
+        .ins.a { border-color: var(--violet); }
+        .ins.g { border-color: var(--green); }
+
+        .oc-name { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+        .oc-price-row { margin-bottom: 20px; }
+        .oc-old { text-decoration: line-through; color: var(--muted); margin-right: 10px; }
+        .oc-new { font-size: 24px; font-weight: 800; color: var(--green); }
+        .oc-items { list-style: none; margin-bottom: 24px; }
+        .oc-items li { font-size: 14px; margin-bottom: 8px; color: var(--muted); display: flex; gap: 8px; }
+        .buy {
+            display: block;
+            background: var(--green);
+            color: #000;
+            text-align: center;
+            padding: 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: transform 0.2s;
+        }
+        .buy:hover { transform: scale(1.02); }
+
+        /* Progress */
+        .ptrack { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+        .pfill { height: 100%; background: var(--green); width: 0%; transition: width 0.4s; }
+        .pi { font-size: 13px; color: var(--muted); margin-bottom: 8px; display: flex; gap: 10px; }
+        .pi.done { color: #fff; }
+
+        @media (max-width: 768px) {
+            header { padding: 15px 20px; }
+            .input-wrapper { bottom: 20px; padding: 16px; width: 95%; }
+            h1 { font-size: 48px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-effects">
+        <div class="glow"></div>
+        <div class="dots"></div>
+    </div>
+
+    <header>
+        <div class="logo">Oziris <span class="beta-badge">Agente IA</span></div>
+        <button class="btn-try">Acessar Kit</button>
+    </header>
+
+    <main id="hero">
+        <h1>Diagnóstico de<br>Marketing com <em>IA</em></h1>
+        <p class="subtitle">Descubra onde seu funil está perdendo dinheiro e como agentes autônomos podem escalar seu faturamento.</p>
+        <button class="cta-main" onclick="openChat()">Iniciar Diagnóstico Gratuito →</button>
+    </main>
+
+    <section id="chat">
+        <div class="chat-header">
+            <div>OZIRIS // AGENTE_DE_DIAGNÓSTICO</div>
+            <div id="slabel" style="color: var(--muted)">ETAPA_01 / 05</div>
+        </div>
+        <div class="chat-body" id="cb"></div>
+        
+        <div class="input-wrapper" id="input-area" style="display: none;">
+            <div class="input-row">
+                <input type="text" id="inp" placeholder="Digite sua resposta..." autocomplete="off">
+                <button class="send-btn" id="sbtn" onclick="sendTxt()" disabled>
+                    <svg viewBox="0 0 24 24"><path d="M2 12L22 2L15 22L11 13L2 12Z"/></svg>
+                </button>
+            </div>
+            <div class="chips" id="chips"></div>
+        </div>
+    </section>
+
+    <script>
+        const cb = document.getElementById('cb');
+        const chips = document.getElementById('chips');
+        const inp = document.getElementById('inp');
+        const sbtn = document.getElementById('sbtn');
+        const sl = document.getElementById('slabel');
+        const inputArea = document.getElementById('input-area');
+        const ans = {};
+
+        inp.addEventListener('input', () => { sbtn.disabled = inp.value.trim() === ''; });
+        inp.addEventListener('keydown', (e) => { if(e.key === 'Enter') sendTxt(); });
+
+        function openChat() {
+            document.getElementById('hero').style.display = 'none';
+            document.getElementById('chat').classList.add('on');
+            inputArea.style.display = 'block';
+            run(0);
+        }
+
+        function scroll() { setTimeout(() => cb.scrollTo({ top: cb.scrollHeight, behavior: 'smooth' }), 80); }
+        function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function mkTyping() {
+            const el = document.createElement('div'); el.className = 'typ'; el.id = 'typ';
+            el.innerHTML = '<span></span><span></span><span></span>';
+            cb.appendChild(el); scroll(); return el;
+        }
+        function rmTyp() { const t = document.getElementById('typ'); if (t) t.remove(); }
+
+        async function say(txt, cls = '', delay = 1000) {
+            mkTyping();
+            await wait(delay);
+            rmTyp();
+            const el = document.createElement('div');
+            el.className = 'bub' + (cls ? ' ' + cls : '');
+            el.textContent = txt;
+            cb.appendChild(el); scroll();
+        }
+
+        function addBub(txt, cls = '') {
+            const el = document.createElement('div');
+            el.className = 'bub' + (cls ? ' ' + cls : '');
+            el.textContent = txt;
+            cb.appendChild(el); scroll();
+        }
+
+        function showChips(opts, cb2) {
+            chips.innerHTML = '';
+            opts.forEach(o => {
+                const b = document.createElement('button'); b.className = 'chip'; b.textContent = o;
+                b.onclick = () => { chips.innerHTML = ''; addBub(o, 'u'); cb2(o); };
+                chips.appendChild(b);
+            });
+        }
+
+        function clrChips() { chips.innerHTML = ''; }
+        function setStep(n) { sl.textContent = `ETAPA_0${n} / 05`; }
+
+        function awaitTxt() { return new Promise(res => { window._th = res; }); }
+
+        function sendTxt() {
+            const v = inp.value.trim(); if (!v) return;
+            inp.value = ''; sbtn.disabled = true; clrChips();
+            addBub(v, 'u');
+            if (window._th) { window._th(v); window._th = null; }
+        }
+
+        const SD = {
+            'Clínica / Saúde': { cpl: 'R$ 28', perda: '63%', conc: 'R$ 3.200/mês', opp: 'nutrição pós-consulta e reativação de pacientes inativos' },
+            'E-commerce': { cpl: 'R$ 12', perda: '71%', conc: 'R$ 8.500/mês', opp: 'recuperação de carrinho abandonado e remarketing inteligente' },
+            'Educação / Cursos': { cpl: 'R$ 18', perda: '67%', conc: 'R$ 4.100/mês', opp: 'sequência de onboarding automatizada e redução de churn' },
+            'Imobiliária': { cpl: 'R$ 45', perda: '58%', conc: 'R$ 5.800/mês', opp: 'qualificação automática de leads e follow-up de longo prazo' },
+            'Academia / Fitness': { cpl: 'R$ 15', perda: '69%', conc: 'R$ 2.900/mês', opp: 'retenção de alunos e campanhas de reativação mensais' },
+            'Agência de Marketing': { cpl: 'R$ 35', perda: '55%', conc: 'R$ 6.200/mês', opp: 'automação de relatórios e prospecção de novos clientes' },
+        };
+
+        const PI = {
+            'Gero leads mas nenhum compra': 'O tráfego está funcionando. O problema está na etapa de nutrição pós-captura — leads sem follow-up automatizado esfriaram antes de decidir.',
+            'Meu custo por lead está alto demais': 'CPL acima do benchmark do segmento. Criativos mais específicos + landing pages otimizadas reduzem esse custo em até 40%.',
+            'Não tenho tempo pra executar o marketing': 'Sem automação, o marketing depende de você. Isso cria um gargalo que limita o crescimento diretamente à sua disponibilidade.',
+            'Não sei se meu investimento tá retornando': 'Sem rastreamento de atribuição, o dinheiro investido vira caixa-preta. Você não sabe o que funciona, então não consegue escalar o que dá resultado.',
+        };
+
+        async function showProgress(seg) {
+            const el = document.createElement('div'); el.className = 'pc';
+            el.innerHTML = `
+                <div class="pc-label">// PROCESSANDO_DIAGNÓSTICO — AGUARDE</div>
+                <div class="ptrack"><div class="pfill" id="pf"></div></div>
+                <div class="pi" id="pa">Analisando perfil: ${seg}</div>
+                <div class="pi" id="pb">Cruzando com ${Math.floor(Math.random() * 300 + 150)} empresas similares</div>
+                <div class="pi" id="pc_">Mapeando benchmarks de concorrentes</div>
+                <div class="pi" id="pd">Gerando diagnóstico personalizado</div>
+            `;
+            cb.appendChild(el); scroll();
+            const pf = document.getElementById('pf');
+            const steps = [['pa', 25], ['pb', 50], ['pc_', 75], ['pd', 100]];
+            for (const [id, p] of steps) {
+                await wait(700);
+                pf.style.width = p + '%';
+                document.getElementById(id).classList.add('done');
+                scroll();
+            }
+            await wait(600);
+        }
+
+        function mkDiag(seg, budget, pain) {
+            const d = SD[seg] || { cpl: 'R$ 22', perda: '65%', conc: 'R$ 3.500/mês', opp: 'automação de conteúdo e tráfego integrado' };
+            const pi = PI[pain] || 'Identificamos oportunidades claras no seu funil atual.';
+            const el = document.createElement('div'); el.className = 'dc';
+            el.innerHTML = `
+                <div class="dc-badge">✦ DIAGNÓSTICO_GERADO</div>
+                <div class="ins r">
+                    <div class="ins-t">Você perde em média ${d.perda} dos leads na etapa de consideração</div>
+                    <div class="ins-d">${pi}</div>
+                </div>
+                <div class="ins a">
+                    <div class="ins-t">Seus concorrentes em ${seg} investem ${d.conc} com CPL médio de ${d.cpl}</div>
+                    <div class="ins-d">Quem cresce nesse mercado agora usa automação para reduzir o custo por lead em até 40%.</div>
+                </div>
+                <div class="ins g">
+                    <div class="ins-t">Sua maior oportunidade está em ${d.opp}</div>
+                    <div class="ins-d">Empresas similares que implementaram IA reduziram o custo por aquisição em 35%.</div>
+                </div>
+            `;
+            return el;
+        }
+
+        function mkOffer() {
+            const el = document.createElement('div'); el.className = 'oc';
+            el.innerHTML = `
+                <div class="oc-sys">// RECOMENDAÇÃO_DO_SISTEMA</div>
+                <div class="oc-name">Kit de Implementação — Agentes de IA</div>
+                <div class="oc-price-row">
+                    <span class="oc-old">R$ 297</span>
+                    <span class="oc-new">R$ 97</span>
+                </div>
+                <ul class="oc-items">
+                    <li><span>✓</span> Prompts exatos para copiar e aplicar</li>
+                    <li><span>✓</span> Mapa de implementação em 7 dias</li>
+                    <li><span>✓</span> Checklist de ferramentas gratuitas</li>
+                </ul>
+                <a href="#" class="buy">Garantir o Kit por R$ 97 agora →</a>
+            `;
+            return el;
+        }
+
+        async function run(s) {
+            if (s === 0) {
+                setStep(1);
+                await say(`Oi! 👋 Bem-vindo ao diagnóstico do Oziris.\n\nSou um agente de IA que cruza dados reais de mercado em tempo real.\n\nEm menos de 3 minutos você vai saber onde seu funil perde dinheiro.\n\nPodemos começar?`);
+                showChips(['Sim, pode começar! 🚀', 'Tenho uma dúvida'], async r => { run(1); });
+                return;
+            }
+            if (s === 1) {
+                setStep(2);
+                await say(`Qual é o segmento do seu negócio?`);
+                showChips(['Clínica / Saúde', 'E-commerce', 'Educação / Cursos', 'Imobiliária', 'Academia / Fitness', 'Agência de Marketing', 'Outro'], async r => { ans.seg = r; run(2); });
+                return;
+            }
+            if (s === 2) {
+                setStep(3);
+                await say(`Você investe em tráfego pago hoje?`);
+                showChips(['Sim, invisto todo mês', 'Ainda não invisto'], async r => {
+                    if (r.includes('Sim')) {
+                        await say('Qual valor aproximado por mês?');
+                        showChips(['Até R$ 1.000', 'R$ 1.000 – 5.000', 'Acima de R$ 5.000'], async v => { ans.budget = v; run(3); });
+                    } else { ans.budget = 'Sem investimento'; run(3); }
+                });
+                return;
+            }
+            if (s === 3) {
+                setStep(4);
+                await say(`Qual dessas situações mais representa seu desafio hoje?`);
+                showChips(['Gero leads mas nenhum compra', 'Custo por lead alto', 'Não tenho tempo', 'Não sei o retorno'], async r => { ans.pain = r; run(4); });
+                return;
+            }
+            if (s === 4) {
+                setStep(5);
+                await say(`Se isso continuar igual nos próximos 6 meses, como vai afetar seu faturamento?`);
+                showChips(['Perder espaço pro concorrente', 'Crescimento estagnado', 'Desperdiçar dinheiro'], async r => { run(5); });
+                return;
+            }
+            if (s === 5) {
+                clrChips();
+                await say('// INICIANDO_ANÁLISE... Conectando engines de IA ⚙️', 'sys');
+                await showProgress(ans.seg);
+                cb.appendChild(mkDiag(ans.seg, ans.budget, ans.pain));
+                scroll();
+                await wait(1400);
+                await say(`Preparei um Kit completo para você implementar IA no seu marketing ainda essa semana. 👇`);
+                cb.appendChild(mkOffer());
+                scroll();
+            }
+        }
+    </script>
+</body>
+</html>

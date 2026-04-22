@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:stitch.withgoogle.com)",
+      "Skill(claude-api)",
+      "Bash(gh --version)",
+      "Bash(vercel --version)"
+    ]
+  }
+}
