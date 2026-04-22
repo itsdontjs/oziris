@@ -89,51 +89,94 @@ Rastreamento: GA=${w.tracking.ga}, FacebookPixel=${w.tracking.fbPixel}, GTM=${w.
   return ctx;
 }
 
-// ── Motor 1: Claude — Diagnóstico principal ──────────────────────────────────
+// ── Prompt compartilhado — 15 pontos de análise ──────────────────────────────
 
-async function runClaude({ seg, budget, canal, pain, impact, digitalCtx }) {
+function buildAnalysisPrompt({ seg, budget, canal, pain, impact, digitalCtx }) {
   const hasDigital = digitalCtx.trim().length > 0;
-  const prompt = `Você é o Oziris, especialista sênior em marketing digital e automação para negócios brasileiros.
+  return `Você é o Oziris, especialista sênior em marketing digital e análise de negócios brasileiros.
 
-DADOS COMPLETOS DO LEAD (funil SPIN):
+PERFIL DO LEAD:
 - Segmento: ${seg}
 - Investimento mensal em tráfego pago: ${budget || 'Não informado'}
 - Principal canal de aquisição: ${canal || 'Não informado'}
-- Maior gargalo/dor [SPIN — Problema]: ${pain}
-- Impacto se nada mudar [SPIN — Implicação]: ${impact || 'Não informado'}
+- Principal dor: ${pain}
+- Impacto percebido: ${impact || 'Não informado'}
 ${hasDigital ? `\nPRESENÇA DIGITAL ANALISADA:${digitalCtx}` : '\nPresença digital: não fornecida.'}
 
 REGRAS ABSOLUTAS:
-1. Cada frase deve ser específica para ${seg} com canal ${canal || 'informado'} e dor "${pain}"
-2. NUNCA generalize — se servir para outro negócio, reescreva
-3. Gargalos explicam POR QUÊ esse problema acontece nesse segmento
-4. Próximos passos são executáveis essa semana
-5. Score de 1-100 reflete a saúde real do marketing com base nos dados fornecidos
-${hasDigital ? '6. Cite elementos CONCRETOS encontrados no site (pixel, CTA, heading, URL real)' : ''}
+1. CADA item deve ser específico para ${seg} com canal ${canal || 'informado'} — NUNCA generalize
+2. Concorrentes devem ser marcas/empresas brasileiras reais e conhecidas em ${seg}
+3. Score de 1-100 reflete a saúde real do marketing com os dados fornecidos
+${hasDigital ? '4. Cite elementos CONCRETOS encontrados no site/perfil (pixel, CTA, heading, bio, URL)' : ''}
 
 Responda SOMENTE com JSON válido, sem markdown:
 {
-  "nivel": "diagnóstico em 1-2 frases — específico para ${seg} com canal ${canal || 'informado'} e dor '${pain}'",
   "score": <inteiro 1-100>,
-  "gargalos": [
-    "por que '${pain}' acontece especificamente em ${seg}",
-    "consequência direta no dia a dia desse negócio",
-    "o que está sendo perdido por causa disso"
+  "overview": "2-3 frases sobre posicionamento atual e estimativa de performance — específico para ${seg} usando ${canal || 'o canal informado'}",
+  "publico_alvo": "quem é o público-alvo percebido com base no canal, segmento e dor relatada — idade, perfil, dores",
+  "dores_exploradas": [
+    "primeira dor que esse negócio já trabalha bem",
+    "segunda dor explorada",
+    "terceira dor que poderia ser mais explorada"
   ],
-  "perda_estimada": "valor mensal em R$ considerando ${budget || 'ausência de investimento'} no segmento ${seg}",
-  "boa_noticia": "oportunidade real e concreta para ${seg} com ${canal || 'canal informado'} — o que pode mudar rápido",
-  "proximos_passos": [
-    "ação específica para ${seg}, executável essa semana",
-    "resolve diretamente '${pain}'",
-    "resultado mensurável em até 30 dias"
+  "clareza_oferta": "avaliação direta: o que está claro na oferta e o que está confuso ou ausente para ${seg}",
+  "pontos_fortes": [
+    "ponto forte 1 — específico e concreto para esse perfil",
+    "ponto forte 2",
+    "ponto forte 3"
   ],
-  "insights_digitais": ${hasDigital ? '"análise do que foi encontrado: cite elementos reais como pixel ausente, CTA fraco, heading vago, etc."' : 'null'}
+  "gargalos_conversao": [
+    "gargalo 1 — por que acontece especificamente em ${seg} com ${canal || 'esse canal'}",
+    "gargalo 2 — consequência direta no faturamento",
+    "gargalo 3 — o que está sendo perdido"
+  ],
+  "qualidade_conteudo": "avaliação da qualidade, relevância e consistência do conteúdo produzido para ${seg}",
+  "consistencia_frequencia": "análise da consistência e frequência de publicação/comunicação no canal ${canal || 'principal'}",
+  "estrutura_funil": "como está o funil atual: topo → meio → fundo — onde está quebrando para ${seg}",
+  "concorrentes": [
+    "Concorrente brasileiro real 1 em ${seg}",
+    "Concorrente 2",
+    "Concorrente 3",
+    "Concorrente 4",
+    "Concorrente 5",
+    "Concorrente 6",
+    "Concorrente 7",
+    "Concorrente 8",
+    "Concorrente 9",
+    "Concorrente 10"
+  ],
+  "diferenciais": "o que diferencia esse negócio dos 10 concorrentes — o que está sendo desperdiçado ou não comunicado",
+  "lacunas_mercado": [
+    "lacuna 1 que nenhum concorrente está explorando bem em ${seg}",
+    "lacuna 2",
+    "lacuna 3"
+  ],
+  "novos_produtos": [
+    "ideia de produto/serviço 1 viável para ${seg} baseada nas lacunas",
+    "ideia 2",
+    "ideia 3"
+  ],
+  "crescimento_ia": [
+    "estratégia 1 de crescimento usando automação ou IA específica para ${seg}",
+    "estratégia 2",
+    "estratégia 3"
+  ],
+  "melhorias_funil": [
+    "melhoria 1 no funil atual — executável essa semana para ${seg}",
+    "melhoria 2",
+    "melhoria 3"
+  ]
 }`;
+}
 
+// ── Motor 1: Claude — Análise principal ──────────────────────────────────────
+
+async function runClaude(data) {
+  const prompt = buildAnalysisPrompt(data);
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await client.messages.create({
     model: 'claude-opus-4-6',
-    max_tokens: 1500,
+    max_tokens: 2500,
     messages: [{ role: 'user', content: prompt }],
   });
   const raw = message.content.find(b => b.type === 'text')?.text || '';
@@ -142,56 +185,15 @@ Responda SOMENTE com JSON válido, sem markdown:
   return JSON.parse(match[0]);
 }
 
-// ── Motor 2: GPT-4o — Diagnóstico completo + benchmarks ─────────────────────
+// ── Motor 2: GPT-4o — Análise completa (fallback + benchmarks extra) ─────────
 
-async function runGPT({ seg, budget, canal, pain, impact, digitalCtx }) {
-  const hasDigital = digitalCtx.trim().length > 0;
-  const prompt = `Você é o Oziris, especialista sênior em marketing digital e automação para negócios brasileiros.
-
-DADOS COMPLETOS DO LEAD (funil SPIN):
-- Segmento: ${seg}
-- Investimento mensal em tráfego pago: ${budget || 'Não informado'}
-- Principal canal de aquisição: ${canal || 'Não informado'}
-- Maior gargalo/dor [SPIN — Problema]: ${pain}
-- Impacto se nada mudar [SPIN — Implicação]: ${impact || 'Não informado'}
-${hasDigital ? `\nPRESENÇA DIGITAL ANALISADA:${digitalCtx}` : '\nPresença digital: não fornecida.'}
-
-REGRAS ABSOLUTAS:
-1. Cada frase deve ser específica para ${seg} com canal ${canal || 'informado'} e dor "${pain}"
-2. NUNCA generalize — se servir para outro negócio, reescreva
-3. Gargalos explicam POR QUÊ esse problema acontece nesse segmento
-4. Próximos passos são executáveis essa semana
-5. Score de 1-100 reflete a saúde real do marketing com base nos dados fornecidos
-${hasDigital ? '6. Cite elementos CONCRETOS encontrados no site (pixel, CTA, heading real)' : ''}
-
-Responda SOMENTE com JSON válido, sem markdown:
-{
-  "nivel": "diagnóstico em 1-2 frases — específico para ${seg} com canal ${canal || 'informado'} e dor '${pain}'",
-  "score": <inteiro 1-100>,
-  "gargalos": [
-    "por que '${pain}' acontece especificamente em ${seg}",
-    "consequência direta no dia a dia desse negócio",
-    "o que está sendo perdido por causa disso"
-  ],
-  "perda_estimada": "valor mensal em R$ considerando ${budget || 'ausência de investimento'} no segmento ${seg}",
-  "boa_noticia": "oportunidade real e concreta para ${seg} com ${canal || 'canal informado'} — o que pode mudar rápido",
-  "proximos_passos": [
-    "ação específica para ${seg}, executável essa semana",
-    "resolve diretamente '${pain}'",
-    "resultado mensurável em até 30 dias"
-  ],
-  "insights_digitais": ${hasDigital ? '"análise do que foi encontrado: cite elementos reais como pixel ausente, CTA fraco, heading vago, etc."' : 'null'},
-  "benchmarks": [
-    "o que os líderes de ${seg} fazem de diferente em relação a ${canal || 'aquisição de clientes'}",
-    "métrica ou padrão de mercado que esse segmento deveria atingir",
-    "estratégia comprovada que está funcionando agora em ${seg} no Brasil"
-  ]
-}`;
+async function runGPT(data) {
+  const prompt = buildAnalysisPrompt(data);
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const res = await client.chat.completions.create({
     model: 'gpt-4o',
-    max_tokens: 1500,
+    max_tokens: 2500,
     messages: [{ role: 'user', content: prompt }],
   });
   const raw = res.choices[0].message.content || '';
@@ -300,10 +302,8 @@ export default async function handler(req, res) {
   // ── Merge dos resultados ────────────────────────────────────────────────────
   const diagnosis = {
     ...primary,
-    // Se Claude rodou, pega benchmarks do GPT (ele gerou benchmarks separados)
-    // Se GPT é primário, benchmarks já estão em primary
-    benchmarks:  (!claude && gpt) ? (gpt.benchmarks || []) : (gpt?.benchmarks || primary.benchmarks || []),
-    quick_wins:  gemini?.quick_wins || [],
+    // Gemini complementa com quick_wins (ações 48h)
+    quick_wins: gemini?.quick_wins || [],
     engines_used: [
       claude ? 'Claude Opus' : null,
       gpt    ? 'GPT-4o'      : null,
