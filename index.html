@@ -580,7 +580,8 @@ function sendTxt() {
   if (window._th) { window._th(v); window._th = null; }
 }
 
-// ─── INSIGHT POR CANAL ────────────────────────────────────────────────────────
+// ─── DIAGNÓSTICO REAL — 3 ITENS CONCRETOS ─────────────────────────────────────
+// Usa campos do novo prompt de 15 pontos. Mostra dados REAIS do lead.
 const CANAL_INSIGHTS = {
   'Instagram': {
     title: 'Você tem audiência, mas não tem sistema de conversão',
@@ -614,111 +615,64 @@ const CANAL_INSIGHTS = {
   },
 };
 
-function getInsight(canal) {
-  const key = Object.keys(CANAL_INSIGHTS).find(k => canal && canal.toLowerCase().includes(k.toLowerCase().split(' ')[0].toLowerCase()));
-  return CANAL_INSIGHTS[key] || {
+
+function getFallback(canal) {
+  return CANAL_INSIGHTS[canal] || {
     title: 'Você não tem um sistema previsível de geração de clientes',
-    body: 'Independente do canal, a maioria dos negócios que crescem de forma irregular compartilha o mesmo problema: falta de um sistema automatizado e mensurável de aquisição de clientes.',
+    body: 'A maioria dos negócios que não escala compartilha o mesmo problema: sem sistema previsível de aquisição, o crescimento depende de sorte.',
     perda: 'R$2.000 a R$8.000',
   };
 }
 
-// ─── PARTIAL DIAGNOSIS CARD ───────────────────────────────────────────────────
-// Mostra: overview + 1 ponto forte + score
-// Bloqueia: tudo mais (12 seções) — blur + cadeado
-function mkPartialDiag(seg, canal, pain, apiResp) {
-  const fallback   = getInsight(canal);
+// ─── CARD DE DIAGNÓSTICO REAL ─────────────────────────────────────────────────
+// 3 seções com dados reais do lead vindos da IA (15-point prompt)
+function mkDiagFromAPI(apiResp, seg, canal) {
+  const fb         = getFallback(canal);
   const score      = apiResp ? Number(apiResp.score) : null;
-  const scoreColor = !score ? 'var(--orange)' : score < 40 ? '#EF4444' : score < 65 ? '#F59E0B' : 'var(--green)';
+  const scoreColor = !score ? '#F59E0B' : score < 40 ? '#EF4444' : score < 65 ? '#F59E0B' : 'var(--green)';
   const scoreLabel = !score ? '—' : score < 40 ? 'CRÍTICO' : score < 65 ? 'ATENÇÃO' : 'BOM';
+  const engines    = apiResp?.engines_used?.length ? apiResp.engines_used.join(' · ') : '';
 
-  // ── Visível ──
-  const overview    = apiResp?.overview    || fallback.body;
-  const pontoForte1 = apiResp?.pontos_fortes?.[0] || 'Ponto forte identificado pela análise';
+  const insights  = apiResp?.insights_digitais || null;
+  const overview  = apiResp?.overview  || fb.body;
+  const garg1     = apiResp?.gargalos_conversao?.[0] || fb.title;
+  const garg2     = apiResp?.gargalos_conversao?.[1] || 'Processo de atendimento sem automação ou follow-up';
+  const garg3     = apiResp?.gargalos_conversao?.[2] || 'Ausência de métricas claras de conversão';
+  const wins      = apiResp?.quick_wins || [];
 
-  // ── Bloqueados (conteúdo real gerado mas embaçado) ──
-  const b = (v, fb) => v || fb;
-  const publico   = b(apiResp?.publico_alvo,            'Público-alvo mapeado com base no canal e segmento');
-  const dor1      = b(apiResp?.dores_exploradas?.[0],   'Primeira dor que seu negócio já explora');
-  const dor2      = b(apiResp?.dores_exploradas?.[1],   'Segunda dor explorada no conteúdo atual');
-  const clarezaOf = b(apiResp?.clareza_oferta,          'Avaliação da clareza da sua oferta atual');
-  const pf2       = b(apiResp?.pontos_fortes?.[1],      'Segundo ponto forte identificado');
-  const pf3       = b(apiResp?.pontos_fortes?.[2],      'Terceiro ponto forte identificado');
-  const garg1     = b(apiResp?.gargalos_conversao?.[0], 'Primeiro gargalo de conversão identificado');
-  const garg2     = b(apiResp?.gargalos_conversao?.[1], 'Segundo gargalo afetando seu faturamento');
-  const garg3     = b(apiResp?.gargalos_conversao?.[2], 'Terceiro gargalo — o que você está perdendo');
-  const qualConteudo  = b(apiResp?.qualidade_conteudo,      'Avaliação da qualidade do conteúdo produzido');
-  const consistencia  = b(apiResp?.consistencia_frequencia, 'Análise da consistência e frequência de publicação');
-  const funil         = b(apiResp?.estrutura_funil,         'Diagnóstico da estrutura do funil atual');
-  const concs         = apiResp?.concorrentes || ['Concorrente 1','Concorrente 2','Concorrente 3','Concorrente 4','Concorrente 5'];
-  const diferenciais  = b(apiResp?.diferenciais,  'O que diferencia você dos concorrentes mapeados');
-  const lacuna1       = b(apiResp?.lacunas_mercado?.[0], 'Lacuna de mercado não explorada pelos concorrentes');
-  const novoProd1     = b(apiResp?.novos_produtos?.[0],  'Ideia de novo produto/serviço para seu segmento');
-  const ia1           = b(apiResp?.crescimento_ia?.[0],  'Estratégia de crescimento usando IA e automação');
-  const melhoria1     = b(apiResp?.melhorias_funil?.[0], 'Melhoria prática no funil — executável essa semana');
-
-  const engines = apiResp?.engines_used?.length ? apiResp.engines_used.join(' · ') : 'Análise local';
-
-  function lockRow(text) {
-    return `<div class="lock-item">${text}</div>`;
-  }
-  function lockSection(title, ...rows) {
-    return `
-      <div style="margin-bottom:10px;">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--violet);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px;">🔒 ${title}</div>
-        ${rows.map(r => lockRow(r)).join('')}
-      </div>`;
-  }
-
-  const el = document.createElement('div'); el.className = 'pdc';
+  const el = document.createElement('div'); el.className = 'dc';
   el.innerHTML = `
-    <div class="pdc-badge">✦ DIAGNÓSTICO PARCIAL — ${engines}</div>
-
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;">${seg || 'Segmento'}</span>
-      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;">${canal || 'Canal'}</span>
-      ${score ? `<span style="font-family:var(--mono);font-size:11px;color:${scoreColor};background:${scoreColor}18;border:1px solid ${scoreColor}44;border-radius:20px;padding:4px 12px;">SCORE ${score}/100 — ${scoreLabel}</span>` : ''}
+    <div class="dc-badge">✦ DIAGNÓSTICO_REAL — ${engines || 'IA'}</div>
+    <div class="dc-profile">
+      <span class="dc-pill">${seg || 'Segmento'}</span>
+      <span class="dc-pill">${canal || 'Canal'}</span>
+      ${score ? `<span class="dc-pill" style="color:${scoreColor};border-color:${scoreColor}55">SCORE ${score}/100 — ${scoreLabel}</span>` : ''}
     </div>
-
+    ${insights ? `
     <div class="ins a">
-      <div class="ins-t">📊 1. Overview do posicionamento</div>
+      <div class="ins-t">🔍 Sua presença digital analisada</div>
+      <div class="ins-d">${insights}</div>
+    </div>` : ''}
+    <div class="ins r">
+      <div class="ins-t">📊 Diagnóstico do seu posicionamento</div>
       <div class="ins-d">${overview}</div>
     </div>
-
+    <div class="ins r">
+      <div class="ins-t">⚠️ 3 gargalos de conversão identificados</div>
+      <div class="ins-d">→ ${garg1}\n→ ${garg2}\n→ ${garg3}</div>
+    </div>
+    ${wins.length ? `
     <div class="ins g">
-      <div class="ins-t">💪 Ponto forte principal</div>
-      <div class="ins-d">→ ${pontoForte1}</div>
-    </div>
-
-    <div class="pdc-divider"></div>
-
-    <div class="lock-box">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--violet);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px;font-weight:600;">
-        🔒 ANÁLISE COMPLETA — 14 SEÇÕES BLOQUEADAS
-      </div>
-
-      ${lockSection('2. Público-alvo percebido', publico)}
-      ${lockSection('3. Dores exploradas', `→ ${dor1}`, `→ ${dor2}`)}
-      ${lockSection('4. Clareza de oferta', clarezaOf)}
-      ${lockSection('5. Pontos fortes (restantes)', `→ ${pf2}`, `→ ${pf3}`)}
-      ${lockSection('6. Gargalos de conversão', `→ ${garg1}`, `→ ${garg2}`, `→ ${garg3}`)}
-      ${lockSection('7. Qualidade do conteúdo', qualConteudo)}
-      ${lockSection('8. Consistência e frequência', consistencia)}
-      ${lockSection('9. Estrutura de funil atual', funil)}
-      ${lockSection('10. 10 concorrentes diretos no Brasil', ...concs.slice(0,5).map(c => `→ ${c}`), '→ + 5 outros mapeados...')}
-      ${lockSection('11–12. Diferenciais e lacunas de mercado', diferenciais, `→ ${lacuna1}`)}
-      ${lockSection('13. Oportunidades de novos produtos', `→ ${novoProd1}`)}
-      ${lockSection('14. Crescimento com IA e automação', `→ ${ia1}`)}
-      ${lockSection('15. Melhorias práticas no funil', `→ ${melhoria1}`)}
-    </div>
-
-    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:16px;padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:10px;line-height:1.7;">
-      // Análise real gerada por IA para o seu perfil específico.<br>
-      // O plano completo desbloqueia todas as 15 seções com dados concretos e executáveis.
-    </div>
+      <div class="ins-t">⚡ Quick wins — execute nas próximas 48h</div>
+      <div class="ins-d">${wins.map(w => '→ ' + w).join('\n')}</div>
+    </div>` : ''}
+    <div class="dc-divider"></div>
+    <div class="dc-transition">// Diagnóstico gerado com base nos dados reais do seu perfil. O próximo passo é transformar esses insights em um sistema que gera clientes todo dia.</div>
+    ${engines ? `<div style="font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:10px;letter-spacing:0.06em;">// MOTORES: ${engines}</div>` : ''}
   `;
   return el;
 }
+
 
 // ─── OFFER CARD ───────────────────────────────────────────────────────────────
 function mkOffer() {
@@ -856,12 +810,12 @@ async function s6_result() {
   const aiDiag = await (apiPromise || Promise.resolve(null));
   processingEl.remove();
 
-  // Diagnóstico parcial com dados reais (ou fallback local se API falhou)
-  cb.appendChild(mkPartialDiag(ans.seg, ans.canal, ans.pain, aiDiag));
+  // Diagnóstico real com dados do lead (fallback local se API falhou)
+  cb.appendChild(mkDiagFromAPI(aiDiag, ans.seg, ans.canal));
   scroll();
   await wait(1800);
 
-  await say(`Esse é apenas o começo do diagnóstico.\n\nEu identifiquei o gargalo principal — mas o plano completo vai muito além disso. 👇`, '', 1400);
+  await say(`Esse é o diagnóstico real do seu negócio, baseado nos seus dados.\n\nO próximo passo é implementar um sistema que resolve isso de forma automatizada e previsível. 👇`, '', 1400);
   await wait(400);
 
   cb.appendChild(mkOffer());

@@ -24,6 +24,30 @@ async function fetchWithTimeout(url, timeout = FETCH_TIMEOUT) {
   finally { clearTimeout(tid); }
 }
 
+// Extrai dados reais do perfil público do Instagram via meta tags og:
+function extractInstagramData(html, url, username) {
+  const get = rx => (html.match(rx) || [])[1]?.trim() || '';
+  const ogTitle = get(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i)
+               || get(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+  const ogDesc  = get(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']{1,500})["']/i)
+               || get(/<meta[^>]*content=["']([^"']{1,500})["'][^>]*property=["']og:description["']/i);
+  // og:description do Instagram: "12,3K Followers, 450 Following, 89 Posts – Bio text aqui"
+  const followersM = ogDesc.match(/([\d.,]+\s*[KkMm]?)\s*Followers?/i);
+  const followingM = ogDesc.match(/([\d.,]+)\s*Following/i);
+  const postsM     = ogDesc.match(/([\d.,]+)\s*Posts?/i);
+  const bioM       = ogDesc.match(/Posts?\s*[-–]\s*(.+)$/is);
+  const blocked    = !ogTitle && (html.includes('Log in') || html.includes('login_page') || html.length < 500);
+  return {
+    url, username: username || '',
+    title:     ogTitle || '',
+    bio:       bioM ? bioM[1].trim() : (ogDesc || ''),
+    followers: followersM ? followersM[1].trim() : null,
+    following: followingM ? followingM[1].trim() : null,
+    posts:     postsM     ? postsM[1].trim()     : null,
+    blocked,
+  };
+}
+
 function extractWebsiteData(html, url) {
   if (!html) return null;
   html = html
@@ -84,7 +108,24 @@ Rastreamento: GA=${w.tracking.ga}, FacebookPixel=${w.tracking.fbPixel}, GTM=${w.
   }
   if (digital.instagram) {
     const ig = digital.instagram;
-    ctx += `\n=== INSTAGRAM ===\nNome/Perfil: ${ig.title || 'Não encontrado'}\nBio: ${ig.description || 'Não encontrado'}`;
+    if (ig.blocked || (!ig.title && !ig.bio)) {
+      ctx += `\n=== INSTAGRAM (@${ig.username || 'informado'}) ===\nStatus: Perfil existe mas meta-dados não acessíveis publicamente. Use username para análise contextual.`;
+    } else {
+      ctx += `\n=== INSTAGRAM (@${ig.username}) ===
+Nome/Perfil: ${ig.title}
+Bio: ${ig.bio || 'Não encontrado'}
+Seguidores: ${ig.followers || 'Não disponível'}
+Seguindo: ${ig.following || 'Não disponível'}
+Posts publicados: ${ig.posts || 'Não disponível'}
+URL: ${ig.url}`;
+    }
+  }
+  if (digital.youtube) {
+    const yt = digital.youtube;
+    ctx += `\n=== YOUTUBE (${yt.url}) ===
+Título: ${yt.title || 'Não encontrado'}
+Descrição: ${yt.description || 'Não encontrado'}
+Headings: ${yt.headings?.join(' | ') || 'Nenhum'}`;
   }
   return ctx;
 }
@@ -107,12 +148,14 @@ REGRAS ABSOLUTAS:
 1. CADA item deve ser específico para ${seg} com canal ${canal || 'informado'} — NUNCA generalize
 2. Concorrentes devem ser marcas/empresas brasileiras reais e conhecidas em ${seg}
 3. Score de 1-100 reflete a saúde real do marketing com os dados fornecidos
-${hasDigital ? '4. Cite elementos CONCRETOS encontrados no site/perfil (pixel, CTA, heading, bio, URL)' : ''}
+${hasDigital ? `4. OBRIGATÓRIO: cite dados REAIS encontrados (número de seguidores, bio exata, CTAs, pixels, headings)
+5. insights_digitais DEVE mencionar elementos concretos: ex. "bio diz X", "sem pixel do Facebook", "${(digitalCtx.match(/@[\w.]+/) || [''])[0]} tem Y seguidores"` : ''}
 
 Responda SOMENTE com JSON válido, sem markdown:
 {
   "score": <inteiro 1-100>,
-  "overview": "2-3 frases sobre posicionamento atual e estimativa de performance — específico para ${seg} usando ${canal || 'o canal informado'}",
+  "overview": "2-3 frases sobre posicionamento atual citando dados REAIS encontrados (bio, seguidores, título do site, etc.) — específico para ${seg}",
+  "insights_digitais": ${hasDigital ? `"análise da presença digital com dados CONCRETOS: cite bio real, número de seguidores, pixel presente/ausente, CTA encontrada, heading do site — seja específico"` : 'null'},
   "publico_alvo": "quem é o público-alvo percebido com base no canal, segmento e dor relatada — idade, perfil, dores",
   "dores_exploradas": [
     "primeira dor que esse negócio já trabalha bem",
@@ -261,7 +304,10 @@ export default async function handler(req, res) {
   scraped.forEach((r, i) => {
     const html = r.status === 'fulfilled' ? r.value : null;
     if (keys[i] === 'website')   digital.website   = extractWebsiteData(html, websiteUrl);
-    else if (keys[i] === 'instagram') digital.instagram = { platform: 'instagram', title: '', description: '' };
+    else if (keys[i] === 'instagram') {
+      const username = instagramUrl.replace('https://www.instagram.com/', '').replace(/\/$/, '');
+      digital.instagram = html ? extractInstagramData(html, instagramUrl, username) : { url: instagramUrl, username, blocked: true };
+    }
     else if (keys[i] === 'youtube')   digital.youtube   = extractWebsiteData(html, youtubeUrl);
   });
 
