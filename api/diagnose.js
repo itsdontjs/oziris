@@ -269,7 +269,7 @@ Responda SOMENTE com JSON válido, sem markdown:
 }`;
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   const result = await model.generateContent(prompt);
   const raw = result.response.text();
   const match = raw.match(/\{[\s\S]+\}/);
