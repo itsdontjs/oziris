@@ -208,77 +208,73 @@ Responda SOMENTE com JSON válido, sem markdown:
     "melhoria 1 no funil atual — executável essa semana para ${seg}",
     "melhoria 2",
     "melhoria 3"
+  ],
+  "quick_wins": [
+    "ação concreta que pode ser feita hoje, específica para ${seg} usando ${canal || 'o canal principal'}",
+    "resolve parte de '${pain}' em menos de 48h",
+    "ajuste simples com impacto imediato no ${seg}"
   ]
 }`;
 }
 
-// ── Motor 1: Claude — Análise principal ──────────────────────────────────────
+// ── Parseia JSON da resposta bruta de qualquer motor ─────────────────────────
+function parseJSON(raw) {
+  const match = raw.match(/\{[\s\S]+\}/);
+  if (!match) throw new Error('no JSON in response');
+  return JSON.parse(match[0]);
+}
 
+// ── Motor 1: Claude ───────────────────────────────────────────────────────────
 async function runClaude(data) {
-  const prompt = buildAnalysisPrompt(data);
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await client.messages.create({
     model: 'claude-opus-4-6',
     max_tokens: 2500,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [{ role: 'user', content: buildAnalysisPrompt(data) }],
   });
-  const raw = message.content.find(b => b.type === 'text')?.text || '';
-  const match = raw.match(/\{[\s\S]+\}/);
-  if (!match) throw new Error('Claude: no JSON');
-  return JSON.parse(match[0]);
+  return parseJSON(message.content.find(b => b.type === 'text')?.text || '');
 }
 
-// ── Motor 2: GPT-4o — Análise completa (fallback + benchmarks extra) ─────────
-
+// ── Motor 2: GPT-4o ───────────────────────────────────────────────────────────
 async function runGPT(data) {
-  const prompt = buildAnalysisPrompt(data);
-
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const res = await client.chat.completions.create({
     model: 'gpt-4o',
     max_tokens: 2500,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [{ role: 'user', content: buildAnalysisPrompt(data) }],
   });
-  const raw = res.choices[0].message.content || '';
-  const match = raw.match(/\{[\s\S]+\}/);
-  if (!match) throw new Error('GPT: no JSON');
-  return JSON.parse(match[0]);
+  return parseJSON(res.choices[0].message.content || '');
 }
 
-// ── Motor 3: Gemini — Quick wins ─────────────────────────────────────────────
-
-async function runGemini({ seg, canal, pain, digitalCtx }) {
-  const hasDigital = digitalCtx.trim().length > 0;
-  const prompt = `Você é um consultor de marketing digital para pequenas e médias empresas brasileiras.
-
-Lead:
-- Segmento: ${seg}
-- Canal principal: ${canal || 'Não informado'}
-- Principal dor: ${pain}
-${hasDigital ? `\nPresença digital:\n${digitalCtx}` : ''}
-
-Gere quick wins — ações concretas que esse negócio pode executar nas próximas 48 horas para sentir resultado rápido. Seja específico para ${seg}.
-
-Responda SOMENTE com JSON válido, sem markdown:
-{
-  "quick_wins": [
-    "ação que pode ser feita hoje, específica para ${seg} usando ${canal || 'o canal principal'}",
-    "resolve parte de '${pain}' em menos de 48h",
-    "configuração ou ajuste simples com impacto imediato"
-  ]
-}`;
-
+// ── Motor 3: Gemini ───────────────────────────────────────────────────────────
+async function runGemini(data) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  const result = await model.generateContent(prompt);
-  const raw = result.response.text();
-  const match = raw.match(/\{[\s\S]+\}/);
-  if (!match) throw new Error('Gemini: no JSON');
-  return JSON.parse(match[0]);
+  const result = await model.generateContent(buildAnalysisPrompt(data));
+  return parseJSON(result.response.text());
+}
+
+// ── Rotação sequencial: tenta Claude → GPT-4o → Gemini ───────────────────────
+const ENGINES = [
+  { name: 'Claude Opus',  run: runClaude },
+  { name: 'GPT-4o',       run: runGPT    },
+  { name: 'Gemini 2.0',   run: runGemini },
+];
+
+async function runWithFallback(data) {
+  for (const engine of ENGINES) {
+    try {
+      const result = await engine.run(data);
+      console.log(`[oziris] ${engine.name} respondeu com sucesso`);
+      return { result, engine: engine.name };
+    } catch (err) {
+      console.error(`[oziris] ${engine.name} falhou:`, err.message?.slice(0, 200));
+    }
+  }
+  return null;
 }
 
 // ── Handler principal ─────────────────────────────────────────────────────────
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -291,7 +287,7 @@ export default async function handler(req, res) {
 
   // ── Scraping em paralelo ────────────────────────────────────────────────────
   const fetches = [];
-  const keys = [];
+  const keys    = [];
   const websiteUrl   = normalizeUrl(website);
   const instagramUrl = normalizeInstagram(instagram);
   const youtubeUrl   = normalizeUrl(youtube);
@@ -303,59 +299,34 @@ export default async function handler(req, res) {
   const digital = {};
   scraped.forEach((r, i) => {
     const html = r.status === 'fulfilled' ? r.value : null;
-    if (keys[i] === 'website')   digital.website   = extractWebsiteData(html, websiteUrl);
-    else if (keys[i] === 'instagram') {
+    if (keys[i] === 'website') {
+      digital.website = extractWebsiteData(html, websiteUrl);
+    } else if (keys[i] === 'instagram') {
       const username = instagramUrl.replace('https://www.instagram.com/', '').replace(/\/$/, '');
-      digital.instagram = html ? extractInstagramData(html, instagramUrl, username) : { url: instagramUrl, username, blocked: true };
+      digital.instagram = html
+        ? extractInstagramData(html, instagramUrl, username)
+        : { url: instagramUrl, username, blocked: true };
+    } else if (keys[i] === 'youtube') {
+      digital.youtube = extractWebsiteData(html, youtubeUrl);
     }
-    else if (keys[i] === 'youtube')   digital.youtube   = extractWebsiteData(html, youtubeUrl);
   });
 
   const digitalCtx = buildDigitalCtx(digital);
   const data = { seg, budget, canal, pain, impact, digitalCtx };
 
-  // ── 3 motores em paralelo ───────────────────────────────────────────────────
-  const [claudeRes, gptRes, geminiRes] = await Promise.allSettled([
-    runClaude(data),
-    runGPT(data),
-    runGemini(data),
-  ]);
+  // ── Rotação: Claude → GPT-4o → Gemini ──────────────────────────────────────
+  const winner = await runWithFallback(data);
 
-  const claude = claudeRes.status === 'fulfilled' ? claudeRes.value : null;
-  const gpt    = gptRes.status    === 'fulfilled' ? gptRes.value    : null;
-  const gemini = geminiRes.status === 'fulfilled' ? geminiRes.value : null;
-
-  if (claudeRes.status === 'rejected') {
-    console.error('[oziris] Claude falhou:', claudeRes.reason?.message);
-  }
-  if (gptRes.status === 'rejected') {
-    console.error('[oziris] GPT falhou:', gptRes.reason?.message);
-  }
-  if (geminiRes.status === 'rejected') {
-    console.error('[oziris] Gemini falhou:', geminiRes.reason?.message);
+  if (!winner) {
+    return res.status(500).json({ error: 'All engines failed — check API keys and billing' });
   }
 
-  // Primário: Claude. Fallback automático: GPT-4o.
-  const primary = claude || gpt;
-
-  if (!primary) {
-    return res.status(500).json({ error: 'All engines failed', details: {
-      claude: claudeRes.reason?.message,
-      gpt:    gptRes.reason?.message,
-    }});
-  }
-
-  // ── Merge dos resultados ────────────────────────────────────────────────────
-  const diagnosis = {
-    ...primary,
-    // Gemini complementa com quick_wins (ações 48h)
-    quick_wins: gemini?.quick_wins || [],
-    engines_used: [
-      claude ? 'Claude Opus' : null,
-      gpt    ? 'GPT-4o'      : null,
-      gemini ? 'Gemini 1.5 Pro' : null,
-    ].filter(Boolean),
-  };
-
-  return res.status(200).json({ success: true, diagnosis });
+  return res.status(200).json({
+    success: true,
+    diagnosis: {
+      ...winner.result,
+      quick_wins:   winner.result.quick_wins   || [],
+      engines_used: [winner.engine],
+    },
+  });
 }
