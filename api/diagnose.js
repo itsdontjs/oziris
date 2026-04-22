@@ -2,8 +2,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const FETCH_TIMEOUT  = 8000;
-const MAX_HTML_CHARS = 15000;
+const FETCH_TIMEOUT   = 8000;
+const APIFY_TIMEOUT   = 30000;
+const MAX_HTML_CHARS  = 15000;
 
 // ── Scraping helpers ─────────────────────────────────────────────────────────
 
@@ -24,7 +25,49 @@ async function fetchWithTimeout(url, timeout = FETCH_TIMEOUT) {
   finally { clearTimeout(tid); }
 }
 
-// Extrai dados reais do perfil público do Instagram via meta tags og:
+// Busca perfil do Instagram via Apify (bypassa bloqueio da Meta)
+async function fetchInstagramViaApify(username) {
+  const token = process.env.APIFY_TOKEN;
+  if (!token) { console.warn('[oziris] APIFY_TOKEN não configurado'); return null; }
+
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), APIFY_TIMEOUT);
+  try {
+    const res = await fetch(
+      `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token=${token}&timeout=25`,
+      {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernames: [username] }),
+      }
+    );
+    if (!res.ok) throw new Error(`Apify HTTP ${res.status}`);
+    const items = await res.json();
+    if (!items?.length) throw new Error('dataset vazio');
+    const p = items[0];
+    console.log(`[oziris] Apify Instagram OK: @${username} — ${p.followersCount} seguidores`);
+    return {
+      url:       `https://www.instagram.com/${username}/`,
+      username,
+      title:     p.fullName    || username,
+      bio:       p.biography   || '',
+      followers: p.followersCount != null ? String(p.followersCount) : null,
+      following: p.followsCount   != null ? String(p.followsCount)   : null,
+      posts:     p.postsCount     != null ? String(p.postsCount)     : null,
+      verified:  p.verified  || false,
+      isPrivate: p.isPrivate || false,
+      blocked:   false,
+    };
+  } catch (err) {
+    console.error('[oziris] Apify Instagram falhou:', err.message?.slice(0, 150));
+    return null;
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+// Extrai dados reais do perfil público do Instagram via meta tags og: (fallback)
 function extractInstagramData(html, url, username) {
   const get = rx => (html.match(rx) || [])[1]?.trim() || '';
   const ogTitle = get(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i)
@@ -286,30 +329,38 @@ export default async function handler(req, res) {
   if (!seg || !pain) return res.status(400).json({ error: 'Missing required fields: seg, pain' });
 
   // ── Scraping em paralelo ────────────────────────────────────────────────────
-  const fetches = [];
-  const keys    = [];
   const websiteUrl   = normalizeUrl(website);
   const instagramUrl = normalizeInstagram(instagram);
   const youtubeUrl   = normalizeUrl(youtube);
-  if (websiteUrl)   { fetches.push(fetchWithTimeout(websiteUrl));   keys.push('website'); }
-  if (instagramUrl) { fetches.push(fetchWithTimeout(instagramUrl)); keys.push('instagram'); }
-  if (youtubeUrl)   { fetches.push(fetchWithTimeout(youtubeUrl));   keys.push('youtube'); }
 
-  const scraped = fetches.length ? await Promise.allSettled(fetches) : [];
+  const igUsername = instagramUrl
+    ? instagramUrl.replace('https://www.instagram.com/', '').replace(/\/$/, '')
+    : null;
+
+  // Instagram via Apify; fallback para og: meta tags se Apify falhar
+  const igPromise = igUsername
+    ? fetchInstagramViaApify(igUsername).then(apifyResult => {
+        if (apifyResult) return apifyResult;
+        // fallback: tenta og: meta tags direto
+        console.warn('[oziris] Apify falhou — tentando og:meta como fallback');
+        return fetchWithTimeout(instagramUrl).then(html =>
+          html
+            ? extractInstagramData(html, instagramUrl, igUsername)
+            : { url: instagramUrl, username: igUsername, blocked: true }
+        );
+      })
+    : Promise.resolve(null);
+
+  const [igResult, websiteHtml, youtubeHtml] = await Promise.all([
+    igPromise,
+    websiteUrl ? fetchWithTimeout(websiteUrl) : Promise.resolve(null),
+    youtubeUrl ? fetchWithTimeout(youtubeUrl) : Promise.resolve(null),
+  ]);
+
   const digital = {};
-  scraped.forEach((r, i) => {
-    const html = r.status === 'fulfilled' ? r.value : null;
-    if (keys[i] === 'website') {
-      digital.website = extractWebsiteData(html, websiteUrl);
-    } else if (keys[i] === 'instagram') {
-      const username = instagramUrl.replace('https://www.instagram.com/', '').replace(/\/$/, '');
-      digital.instagram = html
-        ? extractInstagramData(html, instagramUrl, username)
-        : { url: instagramUrl, username, blocked: true };
-    } else if (keys[i] === 'youtube') {
-      digital.youtube = extractWebsiteData(html, youtubeUrl);
-    }
-  });
+  if (igResult)      digital.instagram = igResult;
+  if (websiteHtml)   digital.website   = extractWebsiteData(websiteHtml, websiteUrl);
+  if (youtubeHtml)   digital.youtube   = extractWebsiteData(youtubeHtml, youtubeUrl);
 
   const digitalCtx = buildDigitalCtx(digital);
   const data = { seg, budget, canal, pain, impact, digitalCtx };
