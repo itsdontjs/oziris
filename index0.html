@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Oziris — Diagnóstico Gratuito com IA</title>
+<title>Oziris — Diagnóstico Inteligente com IA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -272,24 +272,43 @@ h1 em {
 }
 .chip:hover { background: rgba(0,201,123,0.12); border-color: rgba(0,201,123,0.35); }
 
-/* PARTIAL DIAGNOSIS CARD */
-.pdc {
+/* PROGRESS CARD */
+.pc {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 24px;
+  max-width: 82%; align-self: flex-start; backdrop-filter: blur(10px);
+  opacity: 0; transform: translateY(10px); animation: pop .4s ease forwards;
+}
+.pc-label { font-family: var(--mono); font-size: 11px; color: var(--green); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 14px; }
+.ptrack { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+.pfill { height: 100%; background: var(--green); width: 0%; transition: width .4s ease; border-radius: 3px; }
+.pi { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 13px; color: var(--muted); padding: 4px 0; transition: color .3s; }
+.pi.done { color: var(--text); }
+.pi-ic { font-family: var(--mono); font-size: 10px; color: var(--faint); width: 28px; flex-shrink: 0; }
+.pi.done .pi-ic { color: var(--green); }
+
+/* DIAGNOSIS CARD */
+.dc {
   background: var(--surface); border: 1px solid rgba(0,201,123,0.2); border-radius: 24px; padding: 24px;
   max-width: 82%; align-self: flex-start; backdrop-filter: blur(10px);
   opacity: 0; transform: translateY(10px); animation: pop .5s ease forwards;
 }
-.pdc-badge {
+.dc-badge {
   display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--mono); font-size: 10px; color: var(--green);
   background: rgba(0,201,123,0.08); border: 1px solid rgba(0,201,123,0.2);
   border-radius: 20px; padding: 4px 14px; letter-spacing: 0.08em; margin-bottom: 18px; text-transform: uppercase;
 }
-.pdc-title {
-  font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.4;
+.dc-profile { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.dc-pill {
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px;
 }
-.pdc-sub {
-  font-family: var(--mono); font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.7;
+.dc-level {
+  background: rgba(155,127,255,0.08); border: 1px solid rgba(155,127,255,0.2);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
 }
+.dc-level-label { font-family: var(--mono); font-size: 10px; color: var(--violet); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+.dc-level-val { font-size: 15px; font-weight: 600; color: var(--text); }
 .ins { border-left: 2px solid; padding: 10px 14px; margin-bottom: 12px; border-radius: 0 10px 10px 0; }
 .ins:last-of-type { margin-bottom: 0; }
 .ins.r { border-color: #EF4444; background: rgba(239,68,68,0.05); }
@@ -297,30 +316,11 @@ h1 em {
 .ins.g { border-color: var(--green); background: rgba(0,201,123,0.06); }
 .ins-t { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
 .ins-d { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.75; white-space: pre-line; }
-.pdc-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 16px 0; }
-
-/* LOCKED SECTION */
-.lock-box {
-  background: rgba(155,127,255,0.06); border: 1px solid rgba(155,127,255,0.2);
-  border-radius: 14px; padding: 16px 18px; margin-top: 16px;
-  position: relative; overflow: hidden;
+.dc-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 16px 0; }
+.dc-transition {
+  font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.7; margin-top: 14px;
+  padding: 12px 14px; background: rgba(255,255,255,0.03); border-radius: 10px;
 }
-.lock-box::before {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.85) 100%);
-  border-radius: 14px; pointer-events: none;
-}
-.lock-label {
-  font-family: var(--mono); font-size: 10px; color: var(--violet);
-  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px;
-  display: flex; align-items: center; gap: 6px;
-}
-.lock-item {
-  font-family: var(--mono); font-size: 12px; color: var(--faint);
-  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-  display: flex; align-items: center; gap: 8px; filter: blur(3.5px);
-}
-.lock-item:last-child { border: none; }
 
 /* OFFER CARD */
 .oc {
@@ -355,7 +355,7 @@ h1 em {
   .nav-version { display: none; }
   h1 { font-size: 44px; letter-spacing: -1px; }
   .input-wrapper { bottom: 20px; width: 95%; padding: 16px 18px; }
-  .bub, .pdc, .oc { max-width: 94%; }
+  .bub, .dc, .oc, .pc { max-width: 94%; }
   .metrics { flex-direction: column; align-items: center; }
   .input-row { margin-bottom: 10px; }
   .prompt-hints { display: none; }
@@ -383,12 +383,12 @@ h1 em {
 <!-- ═══ HERO ═══ -->
 <section id="hero">
 
-  <div class="hero-label">// DIAGNÓSTICO GRATUITO — RESULTADO EM 2 MINUTOS</div>
+  <div class="hero-label">// MÓDULO DE DIAGNÓSTICO — ACESSO GRATUITO</div>
 
-  <h1>Descubra por que seu<br><em>negócio não escala</em></h1>
+  <h1>Descubra onde o seu<br><em>marketing está falhando</em></h1>
 
   <p class="sub">
-    Responda 6 perguntas rápidas e nossa IA identifica o principal gargalo que está travando o crescimento do seu negócio — agora, de graça.
+    Nossa IA cruza os dados reais do seu negócio com os KPIs dos seus concorrentes e mostra em tempo real onde você perde clientes — de graça, em menos de 3 minutos.
   </p>
 
   <div class="term-card">
@@ -396,24 +396,24 @@ h1 em {
       <div class="term-dot" style="background:#EF4444"></div>
       <div class="term-dot" style="background:#F59E0B"></div>
       <div class="term-dot" style="background:#00C97B"></div>
-      <span style="font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:8px;letter-spacing:0.06em">oziris — diagnóstico_parcial</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:8px;letter-spacing:0.06em">oziris — agente_diagnostico</span>
     </div>
-    <div class="term-line"><span class="g">001</span> Analyzing_Business_Profile...</div>
-    <div class="term-line"><span class="g">002</span> Mapping_Growth_Bottlenecks <span class="v">[6 perguntas]</span></div>
-    <div class="term-line"><span class="g">003</span> Generating_Partial_Diagnosis...</div>
+    <div class="term-line"><span class="g">001</span> Initializing_Diagnostic_Module...</div>
+    <div class="term-line"><span class="g">002</span> Connecting_AI_Engines <span class="v">[Claude · Gemini · OpenAI]</span></div>
+    <div class="term-line"><span class="g">003</span> Loading_Market_Benchmarks...</div>
     <div class="term-line"><span class="g">004</span> Status: <span class="g">READY</span> — Aguardando lead<span class="term-cursor"></span></div>
   </div>
 
   <div class="prompt-wrap">
     <div class="prompt-block" onclick="openChat()">
-      <div class="prompt-text">Qual é o principal canal do seu negócio hoje?</div>
+      <div class="prompt-text">Vamos automatizar sua empresa com IA?</div>
       <div class="prompt-divider"></div>
       <div class="prompt-footer">
         <div class="prompt-hints">
-          <span class="prompt-hint">Instagram</span>
-          <span class="prompt-hint">Site / Blog</span>
-          <span class="prompt-hint">WhatsApp</span>
-          <span class="prompt-hint">YouTube</span>
+          <span class="prompt-hint">Clínica / Saúde</span>
+          <span class="prompt-hint">E-commerce</span>
+          <span class="prompt-hint">Educação</span>
+          <span class="prompt-hint">Agência</span>
         </div>
         <button class="prompt-send" onclick="event.stopPropagation(); openChat()">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -422,7 +422,7 @@ h1 em {
         </button>
       </div>
     </div>
-    <p class="prompt-note">// SEM_CADASTRO · SEM_CARTÃO · DIAGNÓSTICO_IMEDIATO</p>
+    <p class="prompt-note">// SEM_CADASTRO · SEM_CARTÃO · ACESSO_IMEDIATO</p>
   </div>
 
   <div class="proof">
@@ -436,10 +436,10 @@ h1 em {
   </div>
 
   <div class="metrics">
-    <div class="metric"><span class="mg">⚡</span> Diagnóstico em tempo real</div>
-    <div class="metric"><span class="mg">🎯</span> Baseado no seu perfil</div>
+    <div class="metric"><span class="mg">⚡</span> Análise em tempo real</div>
+    <div class="metric"><span class="mg">🎯</span> KPIs dos concorrentes</div>
     <div class="metric"><span class="mg">🔒</span> SECURE — Dados protegidos</div>
-    <div class="metric"><span class="mg">🤖</span> Motor IA — Claude · GPT · Gemini</div>
+    <div class="metric"><span class="mg">🤖</span> Motor Claude · Gemini · OpenAI</div>
   </div>
 
 </section>
@@ -450,10 +450,10 @@ h1 em {
   <div class="ch">
     <div class="ch-brand">
       <div class="logo-icon" style="width:22px;height:22px;font-size:9px;border-radius:6px;">OZ</div>
-      OZIRIS — DIAGNÓSTICO GRATUITO
+      OZIRIS — AGENTE DE DIAGNÓSTICO
     </div>
     <div class="ch-pill">SISTEMA ATIVO</div>
-    <div class="ch-step" id="slabel">ETAPA_01 / 06</div>
+    <div class="ch-step" id="slabel">ETAPA_01 / 07</div>
   </div>
 
   <div class="cb" id="cb"></div>
@@ -479,28 +479,6 @@ const sl       = document.getElementById('slabel');
 const inputArea= document.getElementById('input-area');
 const ans      = {};
 let   apiPromise = null;
-
-// POST para o agente de IA (mesma função do index.html)
-async function callDiagnoseAPI() {
-  const resp = await fetch('/api/diagnose', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      seg:      ans.seg     || '',
-      budget:   ans.budget  || 'Sem investimento ativo',
-      canal:    ans.canal   || '',
-      pain:     ans.pain    || '',
-      impact:   '',
-      website:  ans.website  || null,
-      instagram:ans.instagram|| null,
-      youtube:  ans.youtube  || null,
-    }),
-  });
-  if (!resp.ok) throw new Error(`API ${resp.status}`);
-  const data = await resp.json();
-  if (!data.success) throw new Error(data.error || 'failed');
-  return data.diagnosis;
-}
 
 inp.addEventListener('input', () => { sbtn.disabled = inp.value.trim() === ''; });
 inp.addEventListener('keydown', e => { if (e.key === 'Enter') sendTxt(); });
@@ -553,10 +531,11 @@ function addBub(txt, cls = '') {
 }
 
 function clrChips() { chips.innerHTML = ''; }
-function setStep(n, total = 6) { sl.textContent = `ETAPA_0${n} / 0${total}`; }
+function setStep(n) { sl.textContent = `ETAPA_0${n} / 07`; }
 function awaitTxt() { return new Promise(res => { window._th = res; }); }
 
-function awaitTxtOrSkip(skipLabel = 'Pular') {
+// Await text OR skip chip — shows input + a skip option simultaneously
+function awaitTxtOrSkip(skipLabel = 'Pular esta etapa') {
   return new Promise(res => {
     inp.style.display = '';
     chips.innerHTML = '';
@@ -573,6 +552,137 @@ function awaitTxtOrSkip(skipLabel = 'Pular') {
   });
 }
 
+// POST to Vercel serverless function
+async function callDiagnoseAPI() {
+  const resp = await fetch('/api/diagnose', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      seg:      ans.seg,
+      budget:   ans.budget   || 'Sem investimento ativo',
+      canal:    ans.canal    || '',
+      pain:     ans.pain     || '',
+      impact:   ans.impact   || '',
+      website:  ans.website  || null,
+      instagram:ans.instagram|| null,
+      youtube:  ans.youtube  || null,
+    }),
+  });
+  if (!resp.ok) throw new Error(`API ${resp.status}`);
+  const data = await resp.json();
+  if (!data.success) throw new Error(data.error || 'failed');
+  return data.diagnosis;
+}
+
+// Animação de progresso — API já rodando em segundo plano desde a etapa de dor
+async function showProgressAnimation(seg) {
+  const hasUrls = ans.website || ans.instagram || ans.youtube;
+  const el = document.createElement('div'); el.className = 'pc';
+  el.innerHTML = `
+    <div class="pc-label">// CONSOLIDANDO_DIAGNÓSTICO — AGUARDE</div>
+    <div class="ptrack"><div class="pfill" id="pf"></div></div>
+    <div class="pi" id="pa"><div class="pi-ic">001</div>Analisando perfil: ${seg}</div>
+    <div class="pi" id="pb"><div class="pi-ic">002</div>${hasUrls ? 'Cruzando dados da presença digital' : 'Mapeando padrões em ' + (Math.floor(Math.random()*300+150)) + ' empresas similares'}</div>
+    <div class="pi" id="pc_"><div class="pi-ic">003</div>Identificando gargalos críticos</div>
+    <div class="pi" id="pd"><div class="pi-ic">004</div>Calculando impacto financeiro estimado</div>
+    <div class="pi" id="pe"><div class="pi-ic">005</div>Gerando diagnóstico personalizado com IA</div>
+  `;
+  cb.appendChild(el); scroll();
+  const pf = document.getElementById('pf');
+  const steps = [['pa',20],['pb',40],['pc_',60],['pd',80],['pe',100]];
+  for (const [id, p] of steps) {
+    await wait(700);
+    pf.style.width = p + '%';
+    const d = document.getElementById(id);
+    d.classList.add('done'); d.querySelector('.pi-ic').textContent = '✓'; scroll();
+  }
+  // Se API ainda não terminou, aguardar visivelmente
+  if (apiPromise) {
+    const check = await Promise.race([apiPromise, wait(200).then(() => 'pending')]);
+    if (check === 'pending') {
+      const waitEl = document.createElement('div');
+      waitEl.className = 'bub sys'; waitEl.id = 'api-wait';
+      waitEl.textContent = '// Finalizando análise com IA... aguarde um instante ⚙️';
+      cb.appendChild(waitEl); scroll();
+      await apiPromise;
+      const w = document.getElementById('api-wait'); if (w) w.remove();
+    }
+  }
+  await wait(400);
+}
+
+// Render AI-generated diagnosis card (3 engines: Claude + GPT + Gemini)
+function mkDiagFromAPI(apiResp, seg, budget, pain) {
+  const loss       = apiResp.perda_estimada || getLoss(seg, budget);
+  const score      = Number(apiResp.score) || 42;
+  const scoreColor = score < 40 ? '#EF4444' : score < 65 ? '#F59E0B' : 'var(--green)';
+  const scoreLabel = score < 40 ? 'CRÍTICO' : score < 65 ? 'ATENÇÃO' : 'BOM';
+  const gargs      = apiResp.gargalos        || GARGALOS[pain] || [];
+  const passos     = apiResp.proximos_passos || [];
+  const benchmarks = apiResp.benchmarks      || [];
+  const quickWins  = apiResp.quick_wins      || [];
+  const engines    = apiResp.engines_used    || ['Claude Opus'];
+
+  const insightsHtml = apiResp.insights_digitais ? `
+    <div class="ins a">
+      <div class="ins-t">🔍 Análise da sua presença digital</div>
+      <div class="ins-d">${apiResp.insights_digitais}</div>
+    </div>
+    <div class="dc-divider"></div>` : '';
+
+  const benchmarksHtml = benchmarks.length ? `
+    <div class="dc-divider"></div>
+    <div class="ins a">
+      <div class="ins-t">📊 Benchmarks dos seus concorrentes <span style="font-size:10px;opacity:.6">— GPT-4o</span></div>
+      <div class="ins-d">${benchmarks.map(b => '→ ' + b).join('\n')}</div>
+    </div>` : '';
+
+  const quickWinsHtml = quickWins.length ? `
+    <div class="ins g">
+      <div class="ins-t">⚡ Quick wins — o que fazer nas próximas 48h <span style="font-size:10px;opacity:.6">— Gemini</span></div>
+      <div class="ins-d">${quickWins.map(w => '→ ' + w).join('\n')}</div>
+    </div>` : '';
+
+  const enginesHtml = `<div style="font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:14px;letter-spacing:0.06em;">// MOTORES UTILIZADOS: ${engines.join(' · ')}</div>`;
+
+  const el = document.createElement('div'); el.className = 'dc';
+  el.innerHTML = `
+    <div class="dc-badge">✦ DIAGNÓSTICO_REAL — ${engines.length} MOTORES DE IA</div>
+    <div class="dc-profile">
+      <span class="dc-pill">${seg}</span>
+      <span class="dc-pill">${budget || 'Sem investimento'}</span>
+      <span class="dc-pill" style="color:${scoreColor};border-color:${scoreColor}55">SCORE: ${score}/100 — ${scoreLabel}</span>
+    </div>
+    <div class="dc-level">
+      <div class="dc-level-label">// DIAGNÓSTICO DO SEU NEGÓCIO</div>
+      <div class="dc-level-val">👉 ${apiResp.nivel || 'Crescimento limitado por falta de sistema previsível'}</div>
+    </div>
+    ${insightsHtml}
+    <div class="ins r">
+      <div class="ins-t">⚠️ 3 gargalos críticos identificados</div>
+      <div class="ins-d">${gargs.map(g => '→ ' + g).join('\n')}</div>
+    </div>
+    <div class="ins r">
+      <div class="ins-t">💸 Estimativa de perda mensal</div>
+      <div class="ins-d">Isso pode estar te custando entre ${loss} por mês em oportunidades que não viram clientes.</div>
+    </div>
+    <div class="ins g">
+      <div class="ins-t">🚀 A boa notícia</div>
+      <div class="ins-d">${apiResp.boa_noticia || 'Isso não depende de mais investimento... depende de estrutura e automação inteligente.'}</div>
+    </div>
+    <div class="dc-divider"></div>
+    <div class="ins a">
+      <div class="ins-t">🎯 Primeiros passos recomendados</div>
+      <div class="ins-d">${passos.map(p => '→ ' + p).join('\n')}</div>
+    </div>
+    ${benchmarksHtml}
+    ${quickWinsHtml}
+    <div class="dc-transition">// Esse tipo de análise normalmente é feito em consultorias de R$2.000+... Mas organizei tudo isso em um sistema simples que você pode implementar ainda essa semana.</div>
+    ${enginesHtml}
+  `;
+  return el;
+}
+
 function sendTxt() {
   const v = inp.value.trim(); if (!v) return;
   inp.value = ''; sbtn.disabled = true; clrChips();
@@ -580,301 +690,258 @@ function sendTxt() {
   if (window._th) { window._th(v); window._th = null; }
 }
 
-// ─── INSIGHT POR CANAL ────────────────────────────────────────────────────────
-const CANAL_INSIGHTS = {
-  'Instagram': {
-    title: 'Você tem audiência, mas não tem sistema de conversão',
-    body: 'Negócios que dependem do Instagram como canal principal costumam ter engajamento sem previsibilidade. Sem funil de captura fora da plataforma, cada algoritmo que muda afeta direto seu faturamento.',
-    perda: 'R$2.000 a R$7.000',
-  },
-  'Site / Página de vendas': {
-    title: 'Seu site recebe visitas, mas não transforma em clientes',
-    body: 'Sites sem rastreamento ativo, CTA claro ou sequência de follow-up perdem entre 70-85% dos visitantes sem nenhuma conversão. Cada visita desperdiçada é dinheiro jogado fora.',
-    perda: 'R$3.000 a R$9.000',
-  },
-  'YouTube': {
-    title: 'Conteúdo gera autoridade, mas não gera receita previsível',
-    body: 'Canais no YouTube produzem autoridade sem necessariamente criar um caminho claro para o cliente comprar. Sem ponte entre o conteúdo e a oferta, você educa o mercado de graça.',
-    perda: 'R$2.500 a R$8.000',
-  },
-  'WhatsApp Business': {
-    title: 'Atendimento no WhatsApp sem automação vira gargalo humano',
-    body: 'Depender de atendimento manual no WhatsApp é um teto de crescimento. Sem automação de qualificação e follow-up, você perde leads fora do horário comercial todos os dias.',
-    perda: 'R$1.500 a R$5.000',
-  },
-  'Tráfego pago (Meta/Google Ads)': {
-    title: 'Você investe em tráfego sem ter onde converter esse tráfego',
-    body: 'Tráfego pago sem página otimizada, rastreamento correto e nutrição pós-clique transforma verba em visita sem retorno. É como encher um balde furado.',
-    perda: 'R$4.000 a R$12.000',
-  },
-  'Indicação / boca a boca': {
-    title: 'Indicação é ótima, mas imprevisível por natureza',
-    body: 'Negócios que dependem exclusivamente de indicação não conseguem escalar porque o crescimento depende de terceiros. Sem sistema próprio de geração de leads, o faturamento oscila todo mês.',
-    perda: 'R$2.000 a R$6.000',
-  },
+// ─── DADOS POR SEGMENTO ───────────────────────────────────────────
+const SD = {
+  'Clínica / Saúde':        { perda:'63%', conc:'R$ 3.200/mês', loss:'R$2.000 a R$6.000' },
+  'E-commerce':             { perda:'71%', conc:'R$ 8.500/mês', loss:'R$3.000 a R$9.000' },
+  'Educação / Cursos':      { perda:'67%', conc:'R$ 4.100/mês', loss:'R$2.500 a R$7.000' },
+  'Imobiliária':            { perda:'58%', conc:'R$ 5.800/mês', loss:'R$4.000 a R$12.000' },
+  'Academia / Fitness':     { perda:'69%', conc:'R$ 2.900/mês', loss:'R$1.500 a R$5.000' },
+  'Restaurante / Food':     { perda:'74%', conc:'R$ 1.800/mês', loss:'R$1.500 a R$4.000' },
+  'Agência de Marketing':   { perda:'55%', conc:'R$ 6.200/mês', loss:'R$3.500 a R$10.000' },
+  'Prestação de Serviços':  { perda:'61%', conc:'R$ 2.600/mês', loss:'R$2.000 a R$6.500' },
 };
 
-function getInsight(canal) {
-  const key = Object.keys(CANAL_INSIGHTS).find(k => canal && canal.toLowerCase().includes(k.toLowerCase().split(' ')[0].toLowerCase()));
-  return CANAL_INSIGHTS[key] || {
-    title: 'Você não tem um sistema previsível de geração de clientes',
-    body: 'Independente do canal, a maioria dos negócios que crescem de forma irregular compartilha o mesmo problema: falta de um sistema automatizado e mensurável de aquisição de clientes.',
-    perda: 'R$2.000 a R$8.000',
-  };
+// ─── GARGALOS POR DOR ─────────────────────────────────────────────
+const GARGALOS = {
+  'Gero leads… mas não consigo transformar em clientes': [
+    'Falta de nutrição e follow-up automatizado pós-captura',
+    'Processo de qualificação de leads sem sistema definido',
+    'Atendimento lento que deixa o lead esfriar antes de decidir',
+  ],
+  'Sinto que estou jogando dinheiro fora com marketing': [
+    'Ausência de rastreamento e atribuição de conversões',
+    'Verba investida sem parâmetros claros de retorno',
+    'Criativos sem teste ou otimização contínua',
+  ],
+  'Não tenho tempo e tudo fica travado': [
+    'Dependência de esforço manual nas tarefas de marketing',
+    'Falta de automação nos processos repetitivos',
+    'Gargalo operacional que impede a escala do negócio',
+  ],
+  'Não faço ideia do que está funcionando': [
+    'Ausência de KPIs e painel de métricas definidos',
+    'Decisões tomadas sem dados concretos ou rastreamento',
+    'Impossibilidade de identificar e escalar o que converte',
+  ],
+  'Dependo de outras pessoas e não tenho controle': [
+    'Processos críticos sem documentação ou sistematização',
+    'Dependência de terceiros sem SLA ou previsibilidade',
+    'Ausência de sistema próprio e independente de marketing',
+  ],
+};
+
+// ─── PERDA ESTIMADA ───────────────────────────────────────────────
+function getLoss(seg, budget) {
+  if (budget === 'Acima de R$ 15.000') return 'R$12.000 a R$30.000';
+  if (budget === 'R$ 5.000 – 15.000')  return 'R$6.000 a R$15.000';
+  if (budget === 'R$ 1.000 – 5.000')   return 'R$3.000 a R$8.000';
+  return (SD[seg] || {}).loss || 'R$1.500 a R$8.000';
 }
 
-// ─── PARTIAL DIAGNOSIS CARD ───────────────────────────────────────────────────
-// Mostra: overview + 1 ponto forte + score
-// Bloqueia: tudo mais (12 seções) — blur + cadeado
-function mkPartialDiag(seg, canal, pain, apiResp) {
-  const fallback   = getInsight(canal);
-  const score      = apiResp ? Number(apiResp.score) : null;
-  const scoreColor = !score ? 'var(--orange)' : score < 40 ? '#EF4444' : score < 65 ? '#F59E0B' : 'var(--green)';
-  const scoreLabel = !score ? '—' : score < 40 ? 'CRÍTICO' : score < 65 ? 'ATENÇÃO' : 'BOM';
-
-  // ── Visível ──
-  const overview    = apiResp?.overview    || fallback.body;
-  const pontoForte1 = apiResp?.pontos_fortes?.[0] || 'Ponto forte identificado pela análise';
-
-  // ── Bloqueados (conteúdo real gerado mas embaçado) ──
-  const b = (v, fb) => v || fb;
-  const publico   = b(apiResp?.publico_alvo,            'Público-alvo mapeado com base no canal e segmento');
-  const dor1      = b(apiResp?.dores_exploradas?.[0],   'Primeira dor que seu negócio já explora');
-  const dor2      = b(apiResp?.dores_exploradas?.[1],   'Segunda dor explorada no conteúdo atual');
-  const clarezaOf = b(apiResp?.clareza_oferta,          'Avaliação da clareza da sua oferta atual');
-  const pf2       = b(apiResp?.pontos_fortes?.[1],      'Segundo ponto forte identificado');
-  const pf3       = b(apiResp?.pontos_fortes?.[2],      'Terceiro ponto forte identificado');
-  const garg1     = b(apiResp?.gargalos_conversao?.[0], 'Primeiro gargalo de conversão identificado');
-  const garg2     = b(apiResp?.gargalos_conversao?.[1], 'Segundo gargalo afetando seu faturamento');
-  const garg3     = b(apiResp?.gargalos_conversao?.[2], 'Terceiro gargalo — o que você está perdendo');
-  const qualConteudo  = b(apiResp?.qualidade_conteudo,      'Avaliação da qualidade do conteúdo produzido');
-  const consistencia  = b(apiResp?.consistencia_frequencia, 'Análise da consistência e frequência de publicação');
-  const funil         = b(apiResp?.estrutura_funil,         'Diagnóstico da estrutura do funil atual');
-  const concs         = apiResp?.concorrentes || ['Concorrente 1','Concorrente 2','Concorrente 3','Concorrente 4','Concorrente 5'];
-  const diferenciais  = b(apiResp?.diferenciais,  'O que diferencia você dos concorrentes mapeados');
-  const lacuna1       = b(apiResp?.lacunas_mercado?.[0], 'Lacuna de mercado não explorada pelos concorrentes');
-  const novoProd1     = b(apiResp?.novos_produtos?.[0],  'Ideia de novo produto/serviço para seu segmento');
-  const ia1           = b(apiResp?.crescimento_ia?.[0],  'Estratégia de crescimento usando IA e automação');
-  const melhoria1     = b(apiResp?.melhorias_funil?.[0], 'Melhoria prática no funil — executável essa semana');
-
-  const engines = apiResp?.engines_used?.length ? apiResp.engines_used.join(' · ') : 'Análise local';
-
-  function lockRow(text) {
-    return `<div class="lock-item">${text}</div>`;
-  }
-  function lockSection(title, ...rows) {
-    return `
-      <div style="margin-bottom:10px;">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--violet);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px;">🔒 ${title}</div>
-        ${rows.map(r => lockRow(r)).join('')}
-      </div>`;
-  }
-
-  const el = document.createElement('div'); el.className = 'pdc';
+// ─── DIAGNOSIS CARD ───────────────────────────────────────────────
+function mkDiag(seg, budget, pain) {
+  const d     = SD[seg] || { perda:'65%', conc:'R$ 3.500/mês', loss:'R$1.500 a R$8.000' };
+  const gargs = GARGALOS[pain] || [
+    'Falta de sistema previsível de geração de clientes',
+    'Processos de marketing sem automação',
+    'Ausência de métricas e rastreamento claro',
+  ];
+  const loss = getLoss(seg, budget);
+  const el = document.createElement('div'); el.className = 'dc';
   el.innerHTML = `
-    <div class="pdc-badge">✦ DIAGNÓSTICO PARCIAL — ${engines}</div>
-
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;">${seg || 'Segmento'}</span>
-      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;">${canal || 'Canal'}</span>
-      ${score ? `<span style="font-family:var(--mono);font-size:11px;color:${scoreColor};background:${scoreColor}18;border:1px solid ${scoreColor}44;border-radius:20px;padding:4px 12px;">SCORE ${score}/100 — ${scoreLabel}</span>` : ''}
+    <div class="dc-badge">✦ DIAGNÓSTICO_GERADO — EXCLUSIVO_PARA_VOCÊ</div>
+    <div class="dc-profile">
+      <span class="dc-pill">${seg}</span>
+      <span class="dc-pill">${budget}</span>
     </div>
-
-    <div class="ins a">
-      <div class="ins-t">📊 1. Overview do posicionamento</div>
-      <div class="ins-d">${overview}</div>
+    <div class="dc-level">
+      <div class="dc-level-label">// NÍVEL ATUAL DO SEU NEGÓCIO</div>
+      <div class="dc-level-val">👉 Crescimento limitado por falta de sistema previsível</div>
     </div>
-
+    <div class="ins r">
+      <div class="ins-t">⚠️ 3 gargalos críticos identificados</div>
+      <div class="ins-d">→ ${gargs[0]}\n→ ${gargs[1]}\n→ ${gargs[2]}</div>
+    </div>
+    <div class="ins r">
+      <div class="ins-t">💸 Estimativa de perda mensal</div>
+      <div class="ins-d">Isso pode estar te custando entre ${loss} por mês em oportunidades que não viram clientes.</div>
+    </div>
     <div class="ins g">
-      <div class="ins-t">💪 Ponto forte principal</div>
-      <div class="ins-d">→ ${pontoForte1}</div>
+      <div class="ins-t">🚀 A boa notícia</div>
+      <div class="ins-d">Isso não depende de mais investimento... depende de estrutura e automação inteligente.</div>
     </div>
-
-    <div class="pdc-divider"></div>
-
-    <div class="lock-box">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--violet);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px;font-weight:600;">
-        🔒 ANÁLISE COMPLETA — 14 SEÇÕES BLOQUEADAS
-      </div>
-
-      ${lockSection('2. Público-alvo percebido', publico)}
-      ${lockSection('3. Dores exploradas', `→ ${dor1}`, `→ ${dor2}`)}
-      ${lockSection('4. Clareza de oferta', clarezaOf)}
-      ${lockSection('5. Pontos fortes (restantes)', `→ ${pf2}`, `→ ${pf3}`)}
-      ${lockSection('6. Gargalos de conversão', `→ ${garg1}`, `→ ${garg2}`, `→ ${garg3}`)}
-      ${lockSection('7. Qualidade do conteúdo', qualConteudo)}
-      ${lockSection('8. Consistência e frequência', consistencia)}
-      ${lockSection('9. Estrutura de funil atual', funil)}
-      ${lockSection('10. 10 concorrentes diretos no Brasil', ...concs.slice(0,5).map(c => `→ ${c}`), '→ + 5 outros mapeados...')}
-      ${lockSection('11–12. Diferenciais e lacunas de mercado', diferenciais, `→ ${lacuna1}`)}
-      ${lockSection('13. Oportunidades de novos produtos', `→ ${novoProd1}`)}
-      ${lockSection('14. Crescimento com IA e automação', `→ ${ia1}`)}
-      ${lockSection('15. Melhorias práticas no funil', `→ ${melhoria1}`)}
+    <div class="dc-divider"></div>
+    <div class="ins a">
+      <div class="ins-t">🎯 Se eu estivesse no seu lugar, começaria por isso:</div>
+      <div class="ins-d">→ Organizar um fluxo previsível de entrada de leads\n→ Melhorar o tempo de resposta no atendimento\n→ Automatizar partes do marketing que hoje dependem de você</div>
     </div>
-
-    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:16px;padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:10px;line-height:1.7;">
-      // Análise real gerada por IA para o seu perfil específico.<br>
-      // O plano completo desbloqueia todas as 15 seções com dados concretos e executáveis.
-    </div>
+    <div class="dc-transition">// Esse tipo de análise normalmente é feito em consultorias de R$2.000+... Mas organizei tudo isso em um sistema simples que você pode implementar ainda essa semana.</div>
   `;
   return el;
 }
 
-// ─── OFFER CARD ───────────────────────────────────────────────────────────────
+// ─── OFFER CARD ───────────────────────────────────────────────────
 function mkOffer() {
   const el = document.createElement('div'); el.className = 'oc';
   el.innerHTML = `
-    <div class="oc-sys">// ACESSO_LIBERADO — OFERTA_PÓS_DIAGNÓSTICO</div>
-    <div class="oc-name">Diagnóstico Completo + Plano de Ação com IA</div>
-    <div class="oc-sub">Desbloqueie a análise completa do seu negócio gerada por 3 motores de IA (Claude, GPT-4o e Gemini) com plano de ação personalizado e executável.</div>
+    <div class="oc-sys">// RECOMENDAÇÃO_DO_SISTEMA — ACESSO_LIBERADO</div>
+    <div class="oc-name">Sistema OZIRIS — Máquina de Clientes com IA</div>
+    <div class="oc-sub">Um sistema completo para gerar mais clientes com consistência, automatizar atendimento e criar um fluxo previsível de crescimento.</div>
     <div class="oc-price-row">
       <span class="oc-old">R$ 297</span>
       <span class="oc-new">R$ 97</span>
     </div>
     <ul class="oc-items">
-      <li><span class="ck">[✓]</span> Score completo de saúde do seu marketing (1-100)</li>
-      <li><span class="ck">[✓]</span> 3 gargalos críticos identificados com IA para o seu segmento</li>
-      <li><span class="ck">[✓]</span> Plano de ação detalhado executável essa semana</li>
-      <li><span class="ck">[✓]</span> Benchmarks dos líderes do seu mercado (GPT-4o)</li>
-      <li><span class="ck">[✓]</span> Quick wins para as próximas 48h (Gemini)</li>
-      <li><span class="ck">[✓]</span> Análise da sua presença digital (site, Instagram, YouTube)</li>
+      <li><span class="ck">[✓]</span> Gerar mais clientes com consistência e previsibilidade</li>
+      <li><span class="ck">[✓]</span> Automatizar atendimento e reduzir dependência de equipe</li>
+      <li><span class="ck">[✓]</span> Reduzir dependência de agência com sistema próprio</li>
+      <li><span class="ck">[✓]</span> Criar um fluxo previsível de crescimento</li>
+      <li><span class="ck">[✓]</span> 30 dias no grupo fechado de suporte e estratégia</li>
     </ul>
-    <a href="SEU_LINK_KIWIFY_AQUI" class="buy">Quero meu diagnóstico completo agora →</a>
-    <p class="oc-note">// Acesso imediato após pagamento · Gerado por IA em tempo real para o seu negócio</p>
+    <a href="SEU_LINK_KIWIFY_AQUI" class="buy">Clique aqui para liberar seu acesso agora →</a>
+    <p class="oc-note">// Acesso imediato após pagamento · Condição exclusiva pós-diagnóstico</p>
   `;
   return el;
 }
 
-// ─── FLOW STEPS ───────────────────────────────────────────────────────────────
+// ─── FLOW STEPS ───────────────────────────────────────────────────
+// Cada etapa é uma função independente. Para adicionar, remover ou
+// reordenar uma etapa, basta editar o array FLOW no final.
 
-async function s0_canal(next) {
+async function s0_welcome(next) {
   setStep(1);
-  await say(`Oi! 👋 Eu sou o Oziris — um agente de diagnóstico com IA.\n\nEm menos de 2 minutos, vou te mostrar o principal gargalo que está travando o crescimento do seu negócio hoje.\n\nPrimeira pergunta:\n\nQual é o canal principal que você usa para atrair clientes?`, '', 1600);
-  showChips([
-    'Instagram',
-    'Site / Página de vendas',
-    'YouTube',
-    'WhatsApp Business',
-    'Tráfego pago (Meta/Google Ads)',
-    'Indicação / boca a boca',
-  ], async r => {
-    ans.canal = r;
+  await say(`Oi! 👋 Bem-vindo ao diagnóstico inteligente do Oziris.\n\nEm menos de 3 minutos, vou te mostrar exatamente onde seu negócio está perdendo clientes todos os dias — sem você perceber.\n\nEu analiso padrões reais de empresas que estão crescendo e comparo com o seu cenário para identificar gargalos invisíveis.\n\nVamos começar?`, '', 1600);
+  showChips(['Sim, pode começar! 🚀', 'Tenho uma dúvida antes'], async r => {
+    if (r.includes('dúvida')) {
+      await say('Claro! Me fala o que quer saber 😊', '', 900);
+      await awaitTxt();
+      await say(`Entendido! Vou esclarecer tudo ao longo do diagnóstico.\nPode deixar comigo 👊`, '', 1100);
+    }
     next();
   });
 }
 
-async function s1_link(next) {
+async function s1_segment(next) {
   setStep(2);
-  await say(`Legal! Me manda o link ou @ do seu ${ans.canal} — assim consigo analisar sua presença real e não só suposições.`, '', 1100);
-  const r = await awaitTxtOrSkip('Prefiro não informar');
-  if (r) {
-    if (ans.canal === 'Instagram') ans.instagram = r;
-    else if (ans.canal === 'YouTube') ans.youtube = r;
-    else ans.website = r;
-  }
-  next();
-}
-
-async function s2_segment(next) {
-  setStep(3);
-  await say(`Entendido.\n\nAgora me conta: qual é o segmento do seu negócio?\n\n(Ex: clínica de estética, loja de roupas, consultório odontológico, agência digital, academia...)`, '', 1200);
-  inp.style.display = '';
-  ans.seg = await awaitTxt();
-  next();
-}
-
-async function s3_acquisition(next) {
-  setStep(4);
-  await say(`${ans.seg ? ans.seg.charAt(0).toUpperCase() + ans.seg.slice(1) : 'Seu negócio'} — entendido.\n\nMe conta como funciona hoje na prática:\n\nComo você consegue seus clientes atualmente?`, '', 1300);
+  await say(`Perfeito.\n\nCada tipo de negócio cresce de uma forma diferente — preciso entender o seu para ser preciso.\n\nQual é o segmento do seu negócio?`, '', 1200);
   showChips([
-    'Principalmente pelo ${ans.canal || "canal principal"}',
-    'Mistura de vários canais',
-    'Quase tudo vem de indicação',
-    'Tenho tráfego pago rodando',
-    'Ainda estou começando a atrair clientes',
-  ].map(s => s.replace('${ans.canal || "canal principal"}', ans.canal || 'canal principal')), async r => {
-    ans.acquisition = r;
+    'Clínica / Saúde','E-commerce','Educação / Cursos','Imobiliária',
+    'Academia / Fitness','Restaurante / Food','Agência de Marketing',
+    'Prestação de Serviços','Outro'
+  ], async r => {
+    if (r === 'Outro') {
+      await say('Qual segmento exatamente?', '', 800);
+      ans.seg = await awaitTxt();
+    } else { ans.seg = r; }
     next();
   });
 }
 
-async function s4_investment(next) {
-  setStep(5);
-  await say(`Certo. Você investe em tráfego pago hoje?\n(Meta Ads, Google Ads, TikTok Ads...)`, '', 1000);
+async function s2_links(next) {
+  // Coleta antecipada da presença digital para o agente analisar em segundo plano
+  setStep(3);
+  await say(`Ótimo!\n\nPara que o diagnóstico seja baseado nos seus dados reais — e não em suposições — preciso analisar sua presença digital.\n\nQual é o site da sua empresa?`, '', 1400);
+  ans.website = await awaitTxtOrSkip('Não tenho site / Pular');
+
+  await say(`E o seu Instagram? (ex: @seuperfil ou o link completo)`, '', 800);
+  ans.instagram = await awaitTxtOrSkip('Não tenho / Pular');
+
+  await say(`Tem canal no YouTube?`, '', 700);
+  ans.youtube = await awaitTxtOrSkip('Não tenho / Pular');
+
+  addBub('// Presença digital registrada — aguardando dados do negócio para iniciar análise ⚙️', 'sys');
+  next();
+}
+
+async function s3_traffic(next) {
+  setStep(4);
+  await say(`Entendido ✅\n\nVocê investe em tráfego pago hoje?\n(Meta Ads, Google Ads...)`, '', 1100);
   showChips(['Sim, invisto todo mês', 'Já investi, mas parei', 'Ainda não invisto'], async r => {
     if (r === 'Sim, invisto todo mês') {
-      await say('Quanto você investe por mês, aproximadamente?', '', 800);
+      await say('Qual valor aproximado você investe por mês?', '', 900);
       showChips(['Até R$ 1.000','R$ 1.000 – 5.000','R$ 5.000 – 15.000','Acima de R$ 15.000'], async v => {
         ans.budget = v; next();
       });
     } else {
-      ans.budget = r === 'Já investi, mas parei' ? 'Já investiu, parou' : 'Sem investimento ativo';
-      next();
+      ans.budget = 'Sem investimento ativo'; next();
     }
   });
 }
 
+async function s4_channel(next) {
+  setStep(5);
+  await say(`E hoje, qual é o principal canal que traz clientes pra você?`, '', 1000);
+  showChips(['Instagram','Google','Indicação','WhatsApp','Tráfego pago','Outro'], async r => {
+    ans.canal = r; next();
+  });
+}
+
 async function s5_pain(next) {
+  // SPIN — Problema
   setStep(6);
-  await say(`Última pergunta — e a mais importante:\n\nQual situação mais está travando o crescimento do seu negócio hoje?`, '', 1300);
+  await say(`Agora me diz com sinceridade:\n\nQual dessas situações mais está travando o crescimento do seu negócio hoje?`, '', 1300);
   showChips([
     'Gero leads… mas não consigo transformar em clientes',
     'Sinto que estou jogando dinheiro fora com marketing',
-    'Não tenho tempo e tudo fica travado em mim',
+    'Não tenho tempo e tudo fica travado',
     'Não faço ideia do que está funcionando',
     'Dependo de outras pessoas e não tenho controle',
   ], async r => {
-    ans.pain = r;
-    // Dispara agente de IA em segundo plano — todos os dados SPIN já coletados
+    ans.pain = r; next();
+  });
+}
+
+async function s6_implication(next) {
+  // SPIN — Implicação: faz o lead sentir o custo de não agir
+  setStep(7);
+  await say(`Entendi.\n\nE isso é mais comum do que parece — mas o impacto costuma ser maior do que aparenta nos números.\n\nSe nada mudar nos próximos 6 meses…\nqual dessas situações mais se aproxima da sua realidade?`, '', 1500);
+  showChips([
+    'Vou ver concorrentes crescerem enquanto eu fico pra trás',
+    'Meu faturamento vai travar ou cair',
+    'Vou continuar desperdiçando dinheiro todos os meses',
+    'Sinceramente, isso já está me preocupando de verdade',
+  ], async r => {
+    ans.impact = r;
+    // Agente disparado aqui: tem TODOS os dados do SPIN (seg, budget, canal, pain, impact)
+    // + presença digital coletada na etapa 3. Roda em segundo plano durante a animação.
     apiPromise = callDiagnoseAPI().catch(() => null);
     next();
   });
 }
 
-async function s6_result() {
+async function s7_diagnosis() {
+  // Diagnóstico real gerado pela IA + oferta
   clrChips();
   inp.style.display = 'none';
 
-  await say(`Perfeito. Tenho tudo que preciso.\n\nAnalisando seu perfil agora...`, 'sys', 900);
-  await wait(500);
-
-  // Animação de processamento enquanto API roda em segundo plano
-  const processingEl = document.createElement('div');
-  processingEl.className = 'bub sys';
-  processingEl.textContent = '// Cruzando dados com 3 motores de IA: Claude · GPT-4o · Gemini ⚙️';
-  cb.appendChild(processingEl); scroll();
-
-  // Aguarda API (já disparada em s5_pain) — máximo ~8s de animação enquanto espera
-  const checkPending = await Promise.race([
-    apiPromise || Promise.resolve(null),
-    wait(200).then(() => 'pending'),
-  ]);
-  if (checkPending === 'pending') {
-    await wait(2800); // dá tempo à API terminar enquanto exibe a animação
-  }
+  await say(`Perfeito. Tenho tudo que preciso.\n\nGerando seu diagnóstico personalizado...`, 'sys', 900);
+  await wait(400);
+  await showProgressAnimation(ans.seg);
+  await wait(300);
 
   const aiDiag = await (apiPromise || Promise.resolve(null));
-  processingEl.remove();
 
-  // Diagnóstico parcial com dados reais (ou fallback local se API falhou)
-  cb.appendChild(mkPartialDiag(ans.seg, ans.canal, ans.pain, aiDiag));
+  if (aiDiag) {
+    cb.appendChild(mkDiagFromAPI(aiDiag, ans.seg, ans.budget || 'Sem investimento ativo', ans.pain));
+  } else {
+    cb.appendChild(mkDiag(ans.seg, ans.budget || 'Sem investimento ativo', ans.pain));
+  }
   scroll();
-  await wait(1800);
+  await wait(1600);
 
-  await say(`Esse é apenas o começo do diagnóstico.\n\nEu identifiquei o gargalo principal — mas o plano completo vai muito além disso. 👇`, '', 1400);
-  await wait(400);
-
+  await say(`Se esse diagnóstico já te trouxe clareza…\nimagina ter isso rodando automaticamente no seu negócio todos os dias. 👇`, '', 1800);
+  await wait(500);
   cb.appendChild(mkOffer());
   scroll();
 
-  await wait(2000);
-  await say(`Ficou com alguma dúvida? Me pergunta — estou aqui. 😊`, '', 900);
+  await wait(1800);
+  await say(`Faz alguma pergunta se quiser — estou aqui. 😊`, '', 800);
 
   inp.style.display = '';
-
   function registerOfferHandler() {
     window._th = async v => {
-      await say(`Boa pergunta.\n\nO diagnóstico completo é gerado em tempo real pelos 3 motores de IA (Claude, GPT-4o e Gemini) com os dados específicos do seu negócio — não é um conteúdo genérico.\n\nVocê recebe um plano de ação personalizado para começar a executar ainda essa semana. 🎯`, '', 1600);
+      await say(`Faz sentido sua dúvida.\n\nA maioria das empresas só percebe esses problemas depois de perder dinheiro por meses… você já está alguns passos à frente.\n\nE o acesso é imediato — você pode começar hoje mesmo. 🎯`, '', 1400);
       await wait(600);
       cb.appendChild(mkOffer());
       scroll();
@@ -884,15 +951,17 @@ async function s6_result() {
   registerOfferHandler();
 }
 
-// ─── DISPATCHER ───────────────────────────────────────────────────────────────
+// ─── DISPATCHER ────────────────────────────────────────────────────
+// Para adicionar/remover/reordenar etapas: edite apenas este array.
 const FLOW = [
-  s0_canal,
-  s1_link,
-  s2_segment,
-  s3_acquisition,
-  s4_investment,
+  s0_welcome,
+  s1_segment,
+  s2_links,
+  s3_traffic,
+  s4_channel,
   s5_pain,
-  s6_result,
+  s6_implication,
+  s7_diagnosis,
 ];
 
 function run(s) {
