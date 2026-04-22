@@ -142,21 +142,45 @@ Responda SOMENTE com JSON válido, sem markdown:
   return JSON.parse(match[0]);
 }
 
-// ── Motor 2: GPT-4o — Benchmarks competitivos ────────────────────────────────
+// ── Motor 2: GPT-4o — Diagnóstico completo + benchmarks ─────────────────────
 
-async function runGPT({ seg, budget, canal, pain }) {
-  const prompt = `Você é um analista de inteligência de mercado especializado em negócios brasileiros.
+async function runGPT({ seg, budget, canal, pain, impact, digitalCtx }) {
+  const hasDigital = digitalCtx.trim().length > 0;
+  const prompt = `Você é o Oziris, especialista sênior em marketing digital e automação para negócios brasileiros.
 
-Lead:
+DADOS COMPLETOS DO LEAD (funil SPIN):
 - Segmento: ${seg}
-- Investimento em tráfego: ${budget || 'Não informado'}
-- Canal principal: ${canal || 'Não informado'}
-- Principal dor: ${pain}
+- Investimento mensal em tráfego pago: ${budget || 'Não informado'}
+- Principal canal de aquisição: ${canal || 'Não informado'}
+- Maior gargalo/dor [SPIN — Problema]: ${pain}
+- Impacto se nada mudar [SPIN — Implicação]: ${impact || 'Não informado'}
+${hasDigital ? `\nPRESENÇA DIGITAL ANALISADA:${digitalCtx}` : '\nPresença digital: não fornecida.'}
 
-Gere benchmarks competitivos reais para esse segmento no Brasil. O que as empresas que mais crescem em ${seg} estão fazendo que esse negócio provavelmente não faz ainda?
+REGRAS ABSOLUTAS:
+1. Cada frase deve ser específica para ${seg} com canal ${canal || 'informado'} e dor "${pain}"
+2. NUNCA generalize — se servir para outro negócio, reescreva
+3. Gargalos explicam POR QUÊ esse problema acontece nesse segmento
+4. Próximos passos são executáveis essa semana
+5. Score de 1-100 reflete a saúde real do marketing com base nos dados fornecidos
+${hasDigital ? '6. Cite elementos CONCRETOS encontrados no site (pixel, CTA, heading real)' : ''}
 
 Responda SOMENTE com JSON válido, sem markdown:
 {
+  "nivel": "diagnóstico em 1-2 frases — específico para ${seg} com canal ${canal || 'informado'} e dor '${pain}'",
+  "score": <inteiro 1-100>,
+  "gargalos": [
+    "por que '${pain}' acontece especificamente em ${seg}",
+    "consequência direta no dia a dia desse negócio",
+    "o que está sendo perdido por causa disso"
+  ],
+  "perda_estimada": "valor mensal em R$ considerando ${budget || 'ausência de investimento'} no segmento ${seg}",
+  "boa_noticia": "oportunidade real e concreta para ${seg} com ${canal || 'canal informado'} — o que pode mudar rápido",
+  "proximos_passos": [
+    "ação específica para ${seg}, executável essa semana",
+    "resolve diretamente '${pain}'",
+    "resultado mensurável em até 30 dias"
+  ],
+  "insights_digitais": ${hasDigital ? '"análise do que foi encontrado: cite elementos reais como pixel ausente, CTA fraco, heading vago, etc."' : 'null'},
   "benchmarks": [
     "o que os líderes de ${seg} fazem de diferente em relação a ${canal || 'aquisição de clientes'}",
     "métrica ou padrão de mercado que esse segmento deveria atingir",
@@ -167,7 +191,7 @@ Responda SOMENTE com JSON válido, sem markdown:
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const res = await client.chat.completions.create({
     model: 'gpt-4o',
-    max_tokens: 600,
+    max_tokens: 1500,
     messages: [{ role: 'user', content: prompt }],
   });
   const raw = res.choices[0].message.content || '';
@@ -253,19 +277,36 @@ export default async function handler(req, res) {
   const gpt    = gptRes.status    === 'fulfilled' ? gptRes.value    : null;
   const gemini = geminiRes.status === 'fulfilled' ? geminiRes.value : null;
 
-  if (!claude) {
+  if (claudeRes.status === 'rejected') {
     console.error('[oziris] Claude falhou:', claudeRes.reason?.message);
-    return res.status(500).json({ error: 'Primary diagnosis failed', details: claudeRes.reason?.message });
+  }
+  if (gptRes.status === 'rejected') {
+    console.error('[oziris] GPT falhou:', gptRes.reason?.message);
+  }
+  if (geminiRes.status === 'rejected') {
+    console.error('[oziris] Gemini falhou:', geminiRes.reason?.message);
+  }
+
+  // Primário: Claude. Fallback automático: GPT-4o.
+  const primary = claude || gpt;
+
+  if (!primary) {
+    return res.status(500).json({ error: 'All engines failed', details: {
+      claude: claudeRes.reason?.message,
+      gpt:    gptRes.reason?.message,
+    }});
   }
 
   // ── Merge dos resultados ────────────────────────────────────────────────────
   const diagnosis = {
-    ...claude,
-    benchmarks:  gpt?.benchmarks  || [],
+    ...primary,
+    // Se Claude rodou, pega benchmarks do GPT (ele gerou benchmarks separados)
+    // Se GPT é primário, benchmarks já estão em primary
+    benchmarks:  (!claude && gpt) ? (gpt.benchmarks || []) : (gpt?.benchmarks || primary.benchmarks || []),
     quick_wins:  gemini?.quick_wins || [],
     engines_used: [
-      'Claude Opus',
-      gpt    ? 'GPT-4o'        : null,
+      claude ? 'Claude Opus' : null,
+      gpt    ? 'GPT-4o'      : null,
       gemini ? 'Gemini 1.5 Pro' : null,
     ].filter(Boolean),
   };
