@@ -272,6 +272,29 @@ h1 em {
 }
 .chip:hover { background: rgba(0,201,123,0.12); border-color: rgba(0,201,123,0.35); }
 
+/* DIAGNOSIS CARD — usado por mkDiagFromAPI */
+.dc {
+  background: var(--surface); border: 1px solid rgba(0,201,123,0.2); border-radius: 24px; padding: 24px;
+  max-width: 88%; align-self: flex-start; backdrop-filter: blur(10px);
+  opacity: 0; transform: translateY(10px); animation: pop .5s ease forwards;
+}
+.dc-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10px; color: var(--green);
+  background: rgba(0,201,123,0.08); border: 1px solid rgba(0,201,123,0.2);
+  border-radius: 20px; padding: 4px 14px; letter-spacing: 0.08em; margin-bottom: 18px; text-transform: uppercase;
+}
+.dc-profile { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.dc-pill {
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px;
+}
+.dc-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 16px 0; }
+.dc-transition {
+  font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.7; margin-top: 14px;
+  padding: 12px 14px; background: rgba(255,255,255,0.03); border-radius: 10px;
+}
+
 /* PARTIAL DIAGNOSIS CARD */
 .pdc {
   background: var(--surface); border: 1px solid rgba(0,201,123,0.2); border-radius: 24px; padding: 24px;
@@ -798,17 +821,41 @@ async function s6_result() {
   processingEl.textContent = '// Cruzando dados com 3 motores de IA: Claude · GPT-4o · Gemini ⚙️';
   cb.appendChild(processingEl); scroll();
 
-  // Aguarda API (já disparada em s5_pain) — máximo ~8s de animação enquanto espera
-  const checkPending = await Promise.race([
-    apiPromise || Promise.resolve(null),
-    wait(200).then(() => 'pending'),
-  ]);
-  if (checkPending === 'pending') {
-    await wait(2800); // dá tempo à API terminar enquanto exibe a animação
-  }
+  // Aguarda API com timeout máximo visível de 55s (Vercel tem limite de 60s)
+  let apiError = null;
+  const safeApi = (apiPromise || Promise.resolve(null)).catch(e => { apiError = e; return null; });
 
-  const aiDiag = await (apiPromise || Promise.resolve(null));
+  const checkPending = await Promise.race([safeApi, wait(300).then(() => 'pending')]);
+  if (checkPending === 'pending') {
+    await wait(4000); // animação de espera enquanto IA processa
+  }
+  const aiDiag = await safeApi;
   processingEl.remove();
+
+  // Debug visível: se API falhou, mostra o motivo no chat
+  if (!aiDiag) {
+    console.error('[oziris] API retornou null. Erro:', apiError);
+    // Testa a API diretamente para ver o erro real
+    try {
+      const testResp = await fetch('/api/diagnose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seg: ans.seg || 'Teste', pain: ans.pain || 'Teste', canal: ans.canal || '' }),
+      });
+      const testData = await testResp.json();
+      if (!testResp.ok || !testData.success) {
+        const errEl = document.createElement('div');
+        errEl.className = 'bub sys';
+        errEl.textContent = `// ERRO API [${testResp.status}]: ${testData.error || JSON.stringify(testData).slice(0,120)}`;
+        cb.appendChild(errEl); scroll();
+      }
+    } catch (e) {
+      const errEl = document.createElement('div');
+      errEl.className = 'bub sys';
+      errEl.textContent = `// ERRO de rede: ${e.message} — verifique as variáveis de ambiente no Vercel`;
+      cb.appendChild(errEl); scroll();
+    }
+  }
 
   // Diagnóstico real com dados do lead (fallback local se API falhou)
   cb.appendChild(mkDiagFromAPI(aiDiag, ans.seg, ans.canal));
