@@ -508,14 +508,19 @@ async function callDiagnoseAPI() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      seg:      ans.seg     || '',
-      budget:   ans.budget  || 'Sem investimento ativo',
-      canal:    ans.canal   || '',
-      pain:     ans.pain    || '',
+      nome:     ans.nome     || '',
+      whatsapp: ans.whatsapp || '',
+      email:    ans.email    || '',
+      seg:      ans.seg      || '',
+      budget:   ans.budget   || 'Sem investimento ativo',
+      canal:    ans.canal    || '',
+      captacao: ans.acquisition || '',
+      pain:     ans.pain     || '',
       impact:   '',
       website:  ans.website  || null,
       instagram:ans.instagram|| null,
       youtube:  ans.youtube  || null,
+      fonte:    'oziris-index',
     }),
   });
   if (!resp.ok) throw new Error(`API ${resp.status}`);
@@ -593,8 +598,11 @@ function addBub(txt, cls = '') {
 }
 
 function clrChips() { chips.innerHTML = ''; }
-function setStep(n, total = 6) { sl.textContent = `ETAPA_0${n} / 0${total}`; }
+function setStep(n, total = 9) {
+  sl.textContent = `ETAPA_${String(n).padStart(2,'0')} / ${String(total).padStart(2,'0')}`;
+}
 function awaitTxt() { return new Promise(res => { window._th = res; }); }
+
 
 function awaitTxtOrSkip(skipLabel = 'Pular') {
   return new Promise(res => {
@@ -741,9 +749,17 @@ function mkOffer() {
 
 // ─── FLOW STEPS ───────────────────────────────────────────────────────────────
 
-async function s0_canal(next) {
+async function s0_nome(next) {
   setStep(1);
-  await say(`Oi! 👋 Eu sou o Oziris — um agente de diagnóstico com IA.\n\nEm menos de 2 minutos, vou te mostrar o principal gargalo que está travando o crescimento do seu negócio hoje.\n\nPrimeira pergunta: qual é o canal principal que você usa para atrair clientes?`);
+  await say(`Oi! 👋 Eu sou o Oziris — um agente de diagnóstico com IA.\n\nEm menos de 2 minutos, vou identificar o principal gargalo que está travando o crescimento do seu negócio.\n\nPrimeiro: qual é o seu nome?`);
+  inp.style.display = '';
+  ans.nome = await awaitTxt();
+  next();
+}
+
+async function s1_canal(next) {
+  setStep(2);
+  await say(`Prazer, ${ans.nome}! 😊\n\nQual é o canal principal que você usa para atrair clientes hoje?`);
   showChips([
     'Instagram',
     'Site / Página de vendas',
@@ -757,9 +773,9 @@ async function s0_canal(next) {
   });
 }
 
-async function s1_link(next) {
-  setStep(2);
-  await say(`Legal!\n\nMe manda o link ou @ do seu ${ans.canal} — assim consigo analisar sua presença real e não só suposições.`);
+async function s2_link(next) {
+  setStep(3);
+  await say(`Legal!\n\nMe manda o link ou @ do seu ${ans.canal}, ${ans.nome} — assim consigo analisar sua presença real e não só suposições.`);
   const r = await awaitTxtOrSkip('Prefiro não informar');
   if (r) {
     if (ans.canal === 'Instagram') ans.instagram = r;
@@ -769,35 +785,35 @@ async function s1_link(next) {
   next();
 }
 
-async function s2_segment(next) {
-  setStep(3);
+async function s3_segment(next) {
+  setStep(4);
   await say(`Entendido.\n\nAgora me conta: qual é o segmento do seu negócio?\n\nEx: clínica de estética, loja de roupas, consultório odontológico, agência digital, academia...`);
   inp.style.display = '';
   ans.seg = await awaitTxt();
   next();
 }
 
-async function s3_acquisition(next) {
-  setStep(4);
-  await say(`${ans.seg ? ans.seg.charAt(0).toUpperCase() + ans.seg.slice(1) : 'Seu negócio'} — entendido.\n\nMe conta como funciona hoje na prática: como você consegue seus clientes atualmente?`);
+async function s4_acquisition(next) {
+  setStep(5);
+  await say(`${ans.seg ? ans.seg.charAt(0).toUpperCase() + ans.seg.slice(1) : 'Seu negócio'} — anotado.\n\nComo você consegue seus clientes hoje, ${ans.nome}?`);
   showChips([
-    'Principalmente pelo ${ans.canal || "canal principal"}',
+    'Principalmente pelo canal principal',
     'Mistura de vários canais',
     'Quase tudo vem de indicação',
     'Tenho tráfego pago rodando',
     'Ainda estou começando a atrair clientes',
-  ].map(s => s.replace('${ans.canal || "canal principal"}', ans.canal || 'canal principal')), async r => {
+  ].map(s => s.replace('canal principal', ans.canal || 'canal principal')), async r => {
     ans.acquisition = r;
     next();
   });
 }
 
-async function s4_investment(next) {
-  setStep(5);
+async function s5_investment(next) {
+  setStep(6);
   await say(`Certo.\n\nVocê investe em tráfego pago hoje? Meta Ads, Google Ads, TikTok Ads...`);
   showChips(['Sim, invisto todo mês', 'Já investi, mas parei', 'Ainda não invisto'], async r => {
     if (r === 'Sim, invisto todo mês') {
-      await say('Quanto você investe por mês, aproximadamente?');
+      await say(`Quanto você investe por mês, ${ans.nome}?`);
       showChips(['Até R$ 1.000','R$ 1.000 – 5.000','R$ 5.000 – 15.000','Acima de R$ 15.000'], async v => {
         ans.budget = v; next();
       });
@@ -808,9 +824,9 @@ async function s4_investment(next) {
   });
 }
 
-async function s5_pain(next) {
-  setStep(6);
-  await say(`Última pergunta — e a mais importante:\n\nQual situação mais está travando o crescimento do seu negócio hoje?`);
+async function s6_pain(next) {
+  setStep(7);
+  await say(`Última pergunta qualificadora — e a mais importante:\n\nQual situação mais está travando o crescimento do seu negócio hoje, ${ans.nome}?`);
   showChips([
     'Gero leads… mas não consigo transformar em clientes',
     'Sinto que estou jogando dinheiro fora com marketing',
@@ -819,13 +835,34 @@ async function s5_pain(next) {
     'Dependo de outras pessoas e não tenho controle',
   ], async r => {
     ans.pain = r;
-    // Dispara agente de IA em segundo plano — todos os dados SPIN já coletados
+    // Dispara IA em segundo plano — WhatsApp + email compram tempo para a API responder
     apiPromise = callDiagnoseAPI().catch(() => null);
     next();
   });
 }
 
-async function s6_result() {
+async function s7_whatsapp(next) {
+  setStep(8);
+  await say(`Perfeito, ${ans.nome}! ✅\n\nVou preparar seu diagnóstico agora.\n\nQual é o seu WhatsApp? Vou enviar o diagnóstico completo por lá. 📲`);
+  inp.placeholder = '// (11) 99999-9999...';
+  const r = await awaitTxtOrSkip('Pular');
+  ans.whatsapp = r || '';
+  inp.placeholder = '// digite_sua_resposta...';
+  next();
+}
+
+async function s8_email(next) {
+  setStep(9);
+  await say(`E o seu e-mail?\n\nAssim envio o relatório completo com o plano de ação personalizado. 📧`);
+  inp.placeholder = '// seu@email.com...';
+  const r = await awaitTxtOrSkip('Pular');
+  ans.email = r || '';
+  inp.placeholder = '// digite_sua_resposta...';
+
+  next();
+}
+
+async function s9_result() {
   clrChips();
   inp.style.display = 'none';
 
@@ -879,14 +916,14 @@ async function s6_result() {
   scroll();
   await wait(1800);
 
-  await say(`Esse é o diagnóstico real do seu negócio, baseado nos seus dados.\n\nO próximo passo é implementar um sistema que resolve isso de forma automatizada e previsível. 👇`);
+  await say(`${ans.nome}, esse é o diagnóstico real do seu negócio, baseado nos seus dados.\n\nO próximo passo é implementar um sistema que resolve isso de forma automatizada e previsível. 👇`);
   await wait(400);
 
   cb.appendChild(mkOffer());
   scroll();
 
   await wait(2000);
-  await say(`Ficou com alguma dúvida? Me pergunta — estou aqui. 😊`);
+  await say(`Ficou com alguma dúvida, ${ans.nome}? Me pergunta — estou aqui. 😊`);
 
   inp.style.display = '';
 
@@ -904,13 +941,16 @@ async function s6_result() {
 
 // ─── DISPATCHER ───────────────────────────────────────────────────────────────
 const FLOW = [
-  s0_canal,
-  s1_link,
-  s2_segment,
-  s3_acquisition,
-  s4_investment,
-  s5_pain,
-  s6_result,
+  s0_nome,
+  s1_canal,
+  s2_link,
+  s3_segment,
+  s4_acquisition,
+  s5_investment,
+  s6_pain,
+  s7_whatsapp,
+  s8_email,
+  s9_result,
 ];
 
 function run(s) {
