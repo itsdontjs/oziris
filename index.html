@@ -560,14 +560,32 @@ function mkTyping() {
 }
 function rmTyp() { const t = document.getElementById('typ'); if (t) t.remove(); }
 
-async function say(txt, cls = '', delay = 1200) {
+// Calcula delay de digitação humano baseado no nº de caracteres
+function typingDelay(text) {
+  const len = text.trim().length;
+  const base = Math.min(Math.max(len * 28, 500), 3000);
+  return Math.round(base * (0.85 + Math.random() * 0.3)); // ±15% variação natural
+}
+
+// Envia uma única bolha com delay proporcional ao tamanho
+async function bubble(txt, cls = '') {
   mkTyping();
-  await wait(delay);
+  await wait(typingDelay(txt));
   rmTyp();
   const el = document.createElement('div');
   el.className = 'bub' + (cls ? ' ' + cls : '');
   el.textContent = txt;
-  cb.appendChild(el); scroll();
+  cb.appendChild(el);
+  scroll();
+  await wait(200); // pausa natural entre mensagens (lead lendo)
+}
+
+// Divide em múltiplas bolhas no \n\n — estilo WhatsApp humano
+async function say(txt, cls = '') {
+  const parts = txt.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  for (const part of parts) {
+    await bubble(part, cls);
+  }
 }
 
 function showChips(opts, cb2) {
@@ -737,7 +755,7 @@ function mkOffer() {
 
 async function s0_canal(next) {
   setStep(1);
-  await say(`Oi! 👋 Eu sou o Oziris — um agente de diagnóstico com IA.\n\nEm menos de 2 minutos, vou te mostrar o principal gargalo que está travando o crescimento do seu negócio hoje.\n\nPrimeira pergunta:\n\nQual é o canal principal que você usa para atrair clientes?`, '', 1600);
+  await say(`Oi! 👋 Eu sou o Oziris — um agente de diagnóstico com IA.\n\nEm menos de 2 minutos, vou te mostrar o principal gargalo que está travando o crescimento do seu negócio hoje.\n\nPrimeira pergunta: qual é o canal principal que você usa para atrair clientes?`);
   showChips([
     'Instagram',
     'Site / Página de vendas',
@@ -753,7 +771,7 @@ async function s0_canal(next) {
 
 async function s1_link(next) {
   setStep(2);
-  await say(`Legal! Me manda o link ou @ do seu ${ans.canal} — assim consigo analisar sua presença real e não só suposições.`, '', 1100);
+  await say(`Legal!\n\nMe manda o link ou @ do seu ${ans.canal} — assim consigo analisar sua presença real e não só suposições.`);
   const r = await awaitTxtOrSkip('Prefiro não informar');
   if (r) {
     if (ans.canal === 'Instagram') ans.instagram = r;
@@ -765,7 +783,7 @@ async function s1_link(next) {
 
 async function s2_segment(next) {
   setStep(3);
-  await say(`Entendido.\n\nAgora me conta: qual é o segmento do seu negócio?\n\n(Ex: clínica de estética, loja de roupas, consultório odontológico, agência digital, academia...)`, '', 1200);
+  await say(`Entendido.\n\nAgora me conta: qual é o segmento do seu negócio?\n\nEx: clínica de estética, loja de roupas, consultório odontológico, agência digital, academia...`);
   inp.style.display = '';
   ans.seg = await awaitTxt();
   next();
@@ -773,7 +791,7 @@ async function s2_segment(next) {
 
 async function s3_acquisition(next) {
   setStep(4);
-  await say(`${ans.seg ? ans.seg.charAt(0).toUpperCase() + ans.seg.slice(1) : 'Seu negócio'} — entendido.\n\nMe conta como funciona hoje na prática:\n\nComo você consegue seus clientes atualmente?`, '', 1300);
+  await say(`${ans.seg ? ans.seg.charAt(0).toUpperCase() + ans.seg.slice(1) : 'Seu negócio'} — entendido.\n\nMe conta como funciona hoje na prática: como você consegue seus clientes atualmente?`);
   showChips([
     'Principalmente pelo ${ans.canal || "canal principal"}',
     'Mistura de vários canais',
@@ -788,10 +806,10 @@ async function s3_acquisition(next) {
 
 async function s4_investment(next) {
   setStep(5);
-  await say(`Certo. Você investe em tráfego pago hoje?\n(Meta Ads, Google Ads, TikTok Ads...)`, '', 1000);
+  await say(`Certo.\n\nVocê investe em tráfego pago hoje? Meta Ads, Google Ads, TikTok Ads...`);
   showChips(['Sim, invisto todo mês', 'Já investi, mas parei', 'Ainda não invisto'], async r => {
     if (r === 'Sim, invisto todo mês') {
-      await say('Quanto você investe por mês, aproximadamente?', '', 800);
+      await say('Quanto você investe por mês, aproximadamente?');
       showChips(['Até R$ 1.000','R$ 1.000 – 5.000','R$ 5.000 – 15.000','Acima de R$ 15.000'], async v => {
         ans.budget = v; next();
       });
@@ -804,7 +822,7 @@ async function s4_investment(next) {
 
 async function s5_pain(next) {
   setStep(6);
-  await say(`Última pergunta — e a mais importante:\n\nQual situação mais está travando o crescimento do seu negócio hoje?`, '', 1300);
+  await say(`Última pergunta — e a mais importante:\n\nQual situação mais está travando o crescimento do seu negócio hoje?`);
   showChips([
     'Gero leads… mas não consigo transformar em clientes',
     'Sinto que estou jogando dinheiro fora com marketing',
@@ -823,7 +841,7 @@ async function s6_result() {
   clrChips();
   inp.style.display = 'none';
 
-  await say(`Perfeito. Tenho tudo que preciso.\n\nAnalisando seu perfil agora...`, 'sys', 900);
+  await say(`Perfeito. Tenho tudo que preciso.\n\nAnalisando seu perfil agora...`, 'sys');
   await wait(500);
 
   // Animação de processamento enquanto API roda em segundo plano
@@ -873,20 +891,20 @@ async function s6_result() {
   scroll();
   await wait(1800);
 
-  await say(`Esse é o diagnóstico real do seu negócio, baseado nos seus dados.\n\nO próximo passo é implementar um sistema que resolve isso de forma automatizada e previsível. 👇`, '', 1400);
+  await say(`Esse é o diagnóstico real do seu negócio, baseado nos seus dados.\n\nO próximo passo é implementar um sistema que resolve isso de forma automatizada e previsível. 👇`);
   await wait(400);
 
   cb.appendChild(mkOffer());
   scroll();
 
   await wait(2000);
-  await say(`Ficou com alguma dúvida? Me pergunta — estou aqui. 😊`, '', 900);
+  await say(`Ficou com alguma dúvida? Me pergunta — estou aqui. 😊`);
 
   inp.style.display = '';
 
   function registerOfferHandler() {
     window._th = async v => {
-      await say(`Boa pergunta.\n\nO diagnóstico completo é gerado em tempo real pelos 3 motores de IA (Claude, GPT-4o e Gemini) com os dados específicos do seu negócio — não é um conteúdo genérico.\n\nVocê recebe um plano de ação personalizado para começar a executar ainda essa semana. 🎯`, '', 1600);
+      await say(`Boa pergunta.\n\nO diagnóstico completo é gerado em tempo real pelos 3 motores de IA (Claude, GPT-4o e Gemini) com os dados específicos do seu negócio — não é um conteúdo genérico.\n\nVocê recebe um plano de ação personalizado para começar a executar ainda essa semana. 🎯`);
       await wait(600);
       cb.appendChild(mkOffer());
       scroll();
